@@ -4,24 +4,12 @@ package edu.cnu.mdi.mdi3D.app;
 import java.awt.Color;
 import java.awt.EventQueue;
 import java.awt.Font;
-import java.awt.geom.Rectangle2D;
-import java.io.IOException;
-import java.util.List;
-
-import javax.swing.JMenu;
-import javax.swing.JMenuItem;
 
 import com.jogamp.opengl.GLAutoDrawable;
 
 import edu.cnu.mdi.app.BaseMDIApplication;
 import edu.cnu.mdi.desktop.Desktop;
-import edu.cnu.mdi.graphics.toolbar.ToolBits;
 import edu.cnu.mdi.log.Log;
-import edu.cnu.mdi.mapping.GeoJsonCityLoader;
-import edu.cnu.mdi.mapping.GeoJsonCountryLoader;
-import edu.cnu.mdi.mapping.GeoJsonCountryLoader.CountryFeature;
-import edu.cnu.mdi.mapping.MapContainer;
-import edu.cnu.mdi.mapping.MapView2D;
 import edu.cnu.mdi.mdi3D.item3D.Axes3D;
 import edu.cnu.mdi.mdi3D.item3D.Item3D;
 import edu.cnu.mdi.mdi3D.item3D.Line3D;
@@ -30,34 +18,12 @@ import edu.cnu.mdi.mdi3D.item3D.Sphere;
 import edu.cnu.mdi.mdi3D.panel.Panel3D;
 import edu.cnu.mdi.mdi3D.panel.Support3D;
 import edu.cnu.mdi.mdi3D.view3D.PlainView3D;
+import edu.cnu.mdi.mdi3D.view3D.demo.KineticsDemoView3D;
 import edu.cnu.mdi.properties.PropertyUtils;
-import edu.cnu.mdi.sim.demo.network.NetworkDeclutterDemoView;
-import edu.cnu.mdi.sim.simanneal.tspdemo.TspDemoView;
-import edu.cnu.mdi.splot.example.AnotherGaussian;
-import edu.cnu.mdi.splot.example.CubicLogLog;
-import edu.cnu.mdi.splot.example.ErfTest;
-import edu.cnu.mdi.splot.example.ErfcTest;
-import edu.cnu.mdi.splot.example.Gaussian;
-import edu.cnu.mdi.splot.example.GrowingHisto;
-import edu.cnu.mdi.splot.example.Heatmap;
-import edu.cnu.mdi.splot.example.Histo;
-import edu.cnu.mdi.splot.example.Scatter;
-import edu.cnu.mdi.splot.example.StraightLine;
-import edu.cnu.mdi.splot.example.StripChart;
-import edu.cnu.mdi.splot.example.ThreeGaussians;
-import edu.cnu.mdi.splot.example.TwoHisto;
-import edu.cnu.mdi.splot.example.TwoLinesWithErrors;
-import edu.cnu.mdi.splot.pdata.PlotDataException;
-import edu.cnu.mdi.splot.plot.BarPlot;
-import edu.cnu.mdi.splot.plot.PlotView;
-import edu.cnu.mdi.ui.colors.X11Colors;
 import edu.cnu.mdi.util.Environment;
-import edu.cnu.mdi.view.BaseView;
-import edu.cnu.mdi.view.DrawingView;
 import edu.cnu.mdi.view.LogView;
 import edu.cnu.mdi.view.ViewManager;
 import edu.cnu.mdi.view.VirtualView;
-import edu.cnu.mdi.view.demo.NetworkLayoutDemoView;
 
 /**
  * Demo application for the MDI framework.
@@ -99,7 +65,7 @@ public class DemoApp3D extends BaseMDIApplication {
 	private final boolean enableVirtualDesktop = true;
 
 	/** Number of "columns"/cells in the virtual desktop. */
-	private final int virtualDesktopCols = 7;
+	private final int virtualDesktopCols = 3;
 
 	// -------------------------------------------------------------------------
 	// Sample views used by the demo. None are meant to be completely realistic.
@@ -107,13 +73,8 @@ public class DemoApp3D extends BaseMDIApplication {
 	// -------------------------------------------------------------------------
 
 	private PlainView3D view3D;
-	private DrawingView drawingView;
-	private MapView2D mapView;
 	private LogView logView;
-	private PlotView plotView;
-	private NetworkDeclutterDemoView networkDeclutterDemoView;
-	private TspDemoView tspDemoView;
-	private NetworkLayoutDemoView networkLayoutDemoView;
+	private KineticsDemoView3D kineticsView3D;
 
 	/**
 	 * Private constructor: use {@link #getInstance()}.
@@ -169,33 +130,14 @@ public class DemoApp3D extends BaseMDIApplication {
 		logView.setVisible(false);
 		ViewManager.getInstance().getViewMenu().addSeparator();
 
-		// Drawing view
-		drawingView = DrawingView.createDrawingView();
-
-		// 3D view
 		view3D = create3DView();
-
-		// Map view (also loads demo geojson)
-		mapView = createMapView();
-
-		// Plot view
-		plotView = createPlotView();
-
-		// Network declutter demo view
-		networkDeclutterDemoView = createNetworkDeclutterDemoView();
-
-		// TSP demo view
-		tspDemoView = createTspDemoView();
-
-		// Network layout demo view
-		networkLayoutDemoView = createNetworkLayoutDemoView();
-
+		kineticsView3D = KineticsDemoView3D.createKineticsView3D();
 	}
-	
+
 	@Override
     protected String getApplicationId() {
         return "mdiDemoApp";
-    } 
+    }
 
 	/**
 	 * Runs once after the outer frame is showing and Swing layout has stabilized.
@@ -247,30 +189,14 @@ public class DemoApp3D extends BaseMDIApplication {
 	 * typically override these positions.
 	 */
 	private void restoreDefaultViewLocations() {
-		// Column 0: map centered; drawing upper-left
-		virtualView.moveTo(mapView, 0, VirtualView.BOTTOMRIGHT);
-		virtualView.moveTo(drawingView, 0, VirtualView.TOPCENTER);
+		
+		//Column 0`: kinetics view bottom center (overlaps with 3D view, but shows the value of virtual desktop layering)
+		virtualView.moveTo(kineticsView3D, 0, VirtualView.BOTTOMCENTER);
+		// Column 1: 3D centered
+		virtualView.moveTo(view3D, 1, VirtualView.CENTER);
 
-		// Column 1: plot view centered
-		virtualView.moveTo(plotView, 1, VirtualView.CENTER);
-
-		// Column 2: network declutter demo center
-		virtualView.moveTo(networkDeclutterDemoView, 2, VirtualView.CENTER);
-		networkDeclutterDemoView.setVisible(true);
-
-		// Column 3: TSP demo center
-		virtualView.moveTo(tspDemoView, 3, VirtualView.CENTER);
-		tspDemoView.setVisible(true);
-
-		// Column 4: network layout demo lower left
-		virtualView.moveTo(networkLayoutDemoView, 4, 0, -50, VirtualView.BOTTOMLEFT);
-		networkLayoutDemoView.setVisible(true);
-
-		// Column 5: 3D centered
-		virtualView.moveTo(view3D, 5, VirtualView.CENTER);
-
-	// column 6: log view upper left (is not vis by default)
-		virtualView.moveTo(logView, 6, VirtualView.UPPERLEFT);
+	// column 2: log view upper left (is not vis by default)
+		virtualView.moveTo(logView, 2, VirtualView.UPPERLEFT);
 
 	}
 
@@ -286,7 +212,7 @@ public class DemoApp3D extends BaseMDIApplication {
 	private PlainView3D create3DView() {
 		final float xymax = 600f;
 		final float zmax = 600f;
-		final float zmin = -100f;
+		final float zmin = -200f;
 		final float xdist = 0f;
 		final float ydist = 0f;
 		final float zdist = -2.75f * xymax;
@@ -308,10 +234,6 @@ public class DemoApp3D extends BaseMDIApplication {
 
 					@Override
 					public void createInitialItems() {
-
-						final float xymax = 600f;
-						final float zmin = -200f;
-						final float zmax = 600f;
 
 						// 1) Axes
 						addItem(new Axes3D(this, -xymax, xymax, -xymax, xymax, zmin, zmax, null, Color.darkGray, 1f, 7,
@@ -428,200 +350,6 @@ public class DemoApp3D extends BaseMDIApplication {
 		return view3D;
 	}
 
-	/**
-	 * Create the demo plot view.
-	 */
-	PlotView createPlotView() {
-		final PlotView view = new PlotView(PropertyUtils.TITLE, "Demo Plots", 
-				PropertyUtils.FRACTION, 0.7, PropertyUtils.ASPECT, 1.2, PropertyUtils.VISIBLE, true);
-
-		// add the examples menu and call "hack" to fix focus issues
-		JMenu examplesMenu = new JMenu("Gallery");
-		BaseView.applyFocusFix(examplesMenu, view);
-		view.getJMenuBar().add(examplesMenu, 1); // after File menu
-
-		JMenuItem gaussianItem = new JMenuItem("Gaussian Fit");
-		JMenuItem anotherGaussianItem = new JMenuItem("Another Gaussian");
-		JMenuItem logItem = new JMenuItem("Log-log Plot");
-		JMenuItem erfcItem = new JMenuItem("Erfc Fit");
-		JMenuItem erfItem = new JMenuItem("Erf Fit");
-		JMenuItem histoItem = new JMenuItem("Histogram");
-		JMenuItem growingHistoItem = new JMenuItem("Growing Histogram");
-		JMenuItem heatmapItem = new JMenuItem("Heatmap");
-		JMenuItem lineItem = new JMenuItem("Straight Line Fit");
-		JMenuItem stripItem = new JMenuItem("Memory Use Strip Chart");
-		JMenuItem threeGaussiansItem = new JMenuItem("Three Gaussians");
-		JMenuItem twoHistoItem = new JMenuItem("Two Histograms");
-		JMenuItem twoLines = new JMenuItem("Two Lines with Errors");
-		JMenuItem scatterItem = new JMenuItem("Scatter Example");
-		JMenuItem barItem = new JMenuItem("Barplot Example");
-
-
-		gaussianItem.addActionListener(e -> {
-			Gaussian example = new Gaussian(true);
-			view.switchToPlotPanel(example.getPlotPanel());
-		});
-
-		anotherGaussianItem.addActionListener(e -> {
-			AnotherGaussian example = new AnotherGaussian(true);
-			view.switchToPlotPanel(example.getPlotPanel());
-		});
-		
-		logItem.addActionListener(e -> {
-			CubicLogLog example = new CubicLogLog(true);
-			view.switchToPlotPanel(example.getPlotPanel());
-		});
-
-		erfcItem.addActionListener(e -> {
-			ErfcTest example = new ErfcTest(true);
-			view.switchToPlotPanel(example.getPlotPanel());
-		});
-
-		erfItem.addActionListener(e -> {
-			ErfTest example = new ErfTest(true);
-			view.switchToPlotPanel(example.getPlotPanel());
-		});
-
-		histoItem.addActionListener(e -> {
-			Histo example = new Histo(true);
-			view.switchToPlotPanel(example.getPlotPanel());
-		});
-
-		growingHistoItem.addActionListener(e -> {
-			GrowingHisto example = new GrowingHisto(true);
-			view.switchToPlotPanel(example.getPlotPanel());
-		});
-		
-		heatmapItem.addActionListener(e -> {
-			Heatmap example = new Heatmap(true);
-			view.switchToPlotPanel(example.getPlotPanel());
-		});
-
-		lineItem.addActionListener(e -> {
-			StraightLine example = new StraightLine(true);
-			view.switchToPlotPanel(example.getPlotPanel());
-		});
-
-		stripItem.addActionListener(e -> {
-			StripChart example = new StripChart(true);
-			view.switchToPlotPanel(example.getPlotPanel());
-		});
-
-		threeGaussiansItem.addActionListener(e -> {
-			ThreeGaussians example = new ThreeGaussians(true);
-			view.switchToPlotPanel(example.getPlotPanel());
-		});
-
-		twoHistoItem.addActionListener(e -> {
-			TwoHisto example = new TwoHisto(true);
-			view.switchToPlotPanel(example.getPlotPanel());
-		});
-
-		twoLines.addActionListener(e -> {
-			TwoLinesWithErrors example = new TwoLinesWithErrors(true);
-			view.switchToPlotPanel(example.getPlotPanel());
-		});
-
-		scatterItem.addActionListener(e -> {
-			Scatter example = new Scatter(true);
-			view.switchToPlotPanel(example.getPlotPanel());
-		});
-		
-		barItem.addActionListener(e -> {
-			try {
-				view.switchToPlotPanel(BarPlot.demoBarPlot());
-			} catch (PlotDataException e1) {
-				e1.printStackTrace();
-			}
-
-		});
-
-		examplesMenu.add(gaussianItem);
-		examplesMenu.add(anotherGaussianItem);
-		examplesMenu.add(logItem);
-		examplesMenu.add(erfcItem);
-		examplesMenu.add(erfItem);
-		examplesMenu.add(histoItem);
-		examplesMenu.add(growingHistoItem);
-		examplesMenu.add(heatmapItem);
-		examplesMenu.add(lineItem);
-		examplesMenu.add(stripItem);
-		examplesMenu.add(threeGaussiansItem);
-		examplesMenu.add(twoHistoItem);
-		examplesMenu.add(twoLines);
-		examplesMenu.add(scatterItem);
-		examplesMenu.add(barItem);
-		return view;
-	}
-
-	/**
-	 * Create the network declutter demo view.
-	 */
-	NetworkDeclutterDemoView createNetworkDeclutterDemoView() {
-		NetworkDeclutterDemoView view = new NetworkDeclutterDemoView(PropertyUtils.TITLE,
-				"Network Declutter Demo View",
-				PropertyUtils.FRACTION, 0.7, PropertyUtils.ASPECT, 1.2, PropertyUtils.VISIBLE, false,
-				PropertyUtils.BACKGROUND, Color.white, PropertyUtils.WORLDSYSTEM,
-				new Rectangle2D.Double(0.0, 0.0, 1, 1));
-		return view;
-	}
-
-	/**
-	 * Create the TSP demo view.
-	 */
-	TspDemoView createTspDemoView() {
-		TspDemoView view = new TspDemoView(PropertyUtils.TITLE,
-				"TSP Demo View", 
-				PropertyUtils.FRACTION, 0.6, PropertyUtils.ASPECT, 1.2, PropertyUtils.VISIBLE, false,
-				PropertyUtils.BACKGROUND, X11Colors.getX11Color("lavender blush"), PropertyUtils.WORLDSYSTEM,
-				new Rectangle2D.Double(0.0,	 0.0, 1, 1));
-		return view;
-	}
-
-	/**
-	 * Create the network layout demo view.
-	 * @return a new {@link NetworkLayoutDemoView}
-	 */
-	private NetworkLayoutDemoView createNetworkLayoutDemoView() {
-		long toolBits = ToolBits.NAVIGATIONTOOLS | ToolBits.DELETE | ToolBits.CONNECTOR;
-		NetworkLayoutDemoView view = new NetworkLayoutDemoView(PropertyUtils.FRACTION, 0.7, PropertyUtils.ASPECT,
-				1.2, PropertyUtils.TOOLBARBITS, toolBits,
-				PropertyUtils.VISIBLE, false, 
-				PropertyUtils.BACKGROUND, X11Colors.getX11Color("alice blue"), PropertyUtils.TITLE,
-				"Network Layout Demo View ");
-		return view;
-	}
-
-	/**
-	 * Create the demo map view and load small GeoJSON datasets from resources.
-	 *
-	 * @return a new {@link MapView2D}
-	 */
-	private MapView2D createMapView() {
-
-		String resPrefix = Environment.MDI_RESOURCE_PATH;
-		// Load a small set of countries just for demo purposes.
-		try {
-			List<CountryFeature> countries = GeoJsonCountryLoader.loadFromResource(resPrefix + "/geo/countries.geojson");
-			MapView2D.setCountries(countries);
-		} catch (IOException e) {
-			e.printStackTrace();
-		}
-
-		// Load cities as well (optional).
-		try {
-			List<GeoJsonCityLoader.CityFeature> cities = GeoJsonCityLoader.loadFromResource(resPrefix + "/geo/cities.geojson");
-			MapView2D.setCities(cities);
-		} catch (IOException e) {
-			e.printStackTrace();
-		}
-
-		long toolBits =  ToolBits.STATUS | ToolBits.CENTER | ToolBits.ZOOMTOOLS | ToolBits.DRAWINGTOOLS | ToolBits.MAGNIFY ;
-
-		return new MapView2D(PropertyUtils.TITLE, "Sample 2D Map View",
-				PropertyUtils.FRACTION, 0.6, PropertyUtils.ASPECT, 1.5, PropertyUtils.CONTAINERCLASS,
-				MapContainer.class, PropertyUtils.TOOLBARBITS, toolBits);
-	}
 
 	/**
 	 * Entry point for the demo.

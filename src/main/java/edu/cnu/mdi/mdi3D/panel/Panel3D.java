@@ -79,10 +79,32 @@ public class Panel3D extends JPanel implements GLEventListener {
 	// the openGL version and renderer strings
 	protected String _versionStr;
 
+	/**
+	 * Constructor for the 3D panel.
+	 * @param angleX initial rotation angle around X axis (degrees)
+	 * @param angleY initial rotation angle around Y axis (degrees)
+	 * @param angleZ initial rotation angle around Z axis (degrees)
+	 * @param xDist initial X distance
+	 * @param yDist initial Y distance
+	 * @param zDist initial Z distance
+	 */
 	public Panel3D(float angleX, float angleY, float angleZ, float xDist, float yDist, float zDist) {
 		this(angleX, angleY, angleZ, xDist, yDist, zDist, BGFEFAULT, BGFEFAULT, BGFEFAULT, false);
 	}
 
+	/**
+	 * Constructor for the 3D panel.
+	 * @param angleX initial rotation angle around X axis (degrees)
+	 * @param angleY initial rotation angle around Y axis (degrees)
+	 * @param angleZ initial rotation angle around Z axis (degrees)
+	 * @param xDist initial X distance
+	 * @param yDist initial Y distance
+	 * @param zDist initial Z distance
+	 * @param bgRed red component of background color
+	 * @param bgGreen green component of background color
+	 * @param bgBlue blue component of background color
+	 * @param skipLastStage if true, skip the final glLoadIdentity() in display()
+	 */
 	public Panel3D(float angleX, float angleY, float angleZ, float xDist, float yDist, float zDist,
 			float bgRed, float bgGreen, float bgBlue, boolean skipLastStage) {
 

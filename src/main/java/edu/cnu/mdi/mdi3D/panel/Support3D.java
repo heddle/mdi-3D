@@ -28,6 +28,10 @@ public class Support3D {
 	 * @param size     the points size
 	 */
 	public static void drawPoints(GLAutoDrawable drawable, float coords[], Color color, float size, boolean circular) {
+		if (coords == null || coords.length == 0) {
+			return; // Nothing to draw
+		}
+		
 		GL2 gl = drawable.getGL().getGL2();
 		gl.glPointSize(size);
 

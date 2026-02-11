@@ -10,43 +10,51 @@ import edu.cnu.mdi.mdi3D.panel.Support3D;
 public class Cube extends Item3D {
 
 	// x coordinate of center of cube
-	private float _xc;
+	public final float xc;
 
 	// y coordinate of center of cube
-	private float _yc;
+	public final float yc;
 
 	// z coordinate of center of cube
-	private float _zc;
-
-	// half length
-	private float _halfLength;
+	public final float zc;
+	
+	//
+	public final float length;
 
 	// frame?
 	protected boolean _frame;
 
+	/**
+	 * Create a cube
+	 * @param panel3D 
+	 * @param xc
+	 * @param yc
+	 * @param zc
+	 * @param length
+	 * @param color
+	 */
 	public Cube(Panel3D panel3D, float xc, float yc, float zc, float length, Color color) {
 		this(panel3D, xc, yc, zc, length, color, false);
 	}
 
 	public Cube(Panel3D panel3D, float xc, float yc, float zc, float length, Color color, boolean frame) {
 		super(panel3D);
-		_xc = xc;
-		_yc = yc;
-		_zc = zc;
+		this.xc = xc;
+		this.yc = yc;
+		this.zc = zc;
+		this.length = length;
 		_frame = frame;
-		_halfLength = length / 2;
 		setFillColor(color);
 	}
 
 	@Override
 	public void draw(GLAutoDrawable drawable) {
-		float w = 2 * _halfLength;
-		Support3D.drawRectangularSolid(drawable, _xc, _yc, _zc, w, w, w, getFillColor(), 1, _frame);
+		Support3D.drawRectangularSolid(drawable, xc, yc, zc,length, length, length, getFillColor(), 1, _frame);
 	}
 
 	@Override
 	public float[] getSortPoint() {
-		return new float[] { _xc, _yc, _zc };
+		return new float[] { xc, yc, zc };
 	}
 
 
