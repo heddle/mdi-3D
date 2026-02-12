@@ -35,6 +35,12 @@ public class KineticsDemoView3D extends PlainView3D {
 	
 	//Live entropy v. time plot panel
 	private final EntropyPlotPanel _entropyPanel;
+	
+	//the simulation engine
+	private PhysicsEngine<Particle> engine;
+	
+	//the timer that updates the GUI
+	private Timer renderTimer;
 
 	// private constructor
 	private KineticsDemoView3D() {
@@ -61,33 +67,17 @@ public class KineticsDemoView3D extends PlainView3D {
 	
 	@Override
     public void prepareForExit() {
-		// Perform any necessary cleanup here (e.g., stop threads, release resources)
-		// This method can be called when the view is closed or the application exits
-		System.out.println("Prepare for exit");
+		if (engine != null) {
+			engine.stop();
+			System.out.println("Physics engine stopped in prepareForExit.");
+		}
+		if (renderTimer != null) {
+			renderTimer.stop();
+			System.out.println("Render timer stopped in prepareForExit.");
+		}
+		super.prepareForExit();
 	}
 
-	// Setup thread cleanup on window close
-	private void setupAncestorCleanup(PhysicsEngine<?> engine, Timer timer) {
-		// We use a HierarchyListener to wait until the frame is actually added to a
-		// window
-		this.addHierarchyListener(e -> {
-			if ((e.getChangeFlags() & java.awt.event.HierarchyEvent.SHOWING_CHANGED) != 0) {
-				java.awt.Window parentWindow = javax.swing.SwingUtilities.getWindowAncestor(this);
-				if (parentWindow != null) {
-					System.out.println("KineticsDemoView3D: Registered window listener for cleanup.");
-					parentWindow.addWindowListener(new java.awt.event.WindowAdapter() {
-						@Override
-						public void windowClosing(java.awt.event.WindowEvent e) {
-							System.out.println("KineticsDemoView3D: Window closing detected, stopping physics engine and timer...");
-							engine.stop();
-							timer.stop();
-							System.out.println("KineticsDemoView3D: Stopped physics engine and timer on window close.");
-						}
-					});
-				}
-			}
-		});
-	}
 
 	@Override
 	protected Panel3D make3DPanel(float angleX, float angleY, float angleZ, float xDist, float yDist, float zDist) {
@@ -101,12 +91,12 @@ public class KineticsDemoView3D extends PlainView3D {
 				double initialVolumeFraction = 0.25; // Start particles in 1/4th of the box
 
 				KineticsModel model = new KineticsModel(particleCount, initialVolumeFraction, .01f);
-				PhysicsEngine<Particle> engine = new PhysicsEngine<>(model); // Ensure engine constructor is generic
-				// 1) Axes
+				engine = new PhysicsEngine<>(model); // Ensure engine constructor is generic
+				//create Axes
 				addItem(new Axes3D(this, 0, dmax, 0, dmax, 0, dmax, null, Color.darkGray, 1f, 7, 7, 8, Color.black,
 						Color.blue, new Font("SansSerif", Font.PLAIN, 11), 1));
 
-				// boundary cube (the container volume)
+				//create boundary cube (the container volume)
 				addItem(new Cube(this, dmax / 2f, dmax / 2f, dmax / 2f, dmax, cubeColor, true));
 
 				// set up the initially empty point set for the particles (we will update the
@@ -114,13 +104,13 @@ public class KineticsDemoView3D extends PlainView3D {
 				final PointSet3D particlePoints = new PointSet3D(this, null, Color.red, 2f, true);
 				addItem(particlePoints);
 
-				// 2. Start the physics thread
+				//Start the physics thread
 				Thread thread = new Thread(engine, "Physics-Thread");
 				thread.start();
 				
 
-				// 3. Create the GUI Update Timer
-				Timer renderTimer = new Timer(16, e -> {
+				//Create the GUI Update Timer
+				renderTimer = new Timer(16, e -> {
 				    SimulationSnapshot<Particle> snap = engine.getLatestSnapshot();
 
 				    if (snap != null) {
@@ -132,8 +122,6 @@ public class KineticsDemoView3D extends PlainView3D {
 				    }
 				});
 				renderTimer.start();
-				// 4. Register the cleanup (accessing the outer class 'this')
-				KineticsDemoView3D.this.setupAncestorCleanup(engine, renderTimer);
 			} // create initial items
 
 		};
