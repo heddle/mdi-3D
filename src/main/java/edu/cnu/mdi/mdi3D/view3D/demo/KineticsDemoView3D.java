@@ -15,6 +15,7 @@ import edu.cnu.mdi.mdi3D.physics.SimulationSnapshot;
 import edu.cnu.mdi.mdi3D.view3D.PlainView3D;
 import edu.cnu.mdi.properties.PropertyUtils;
 
+@SuppressWarnings("serial")
 public class KineticsDemoView3D extends PlainView3D {
 
 	static final float dmax = 1f;
@@ -29,8 +30,10 @@ public class KineticsDemoView3D extends PlainView3D {
 	static final float thetay = 45f;
 	static final float thetaz = 45f;
 
+	// cube color (with alpha for transparency)
 	private static Color cubeColor = new Color(0, 0, 0, 10);
 	
+	//Live entropy v. time plot panel
 	private final EntropyPlotPanel _entropyPanel;
 
 	// private constructor
@@ -43,6 +46,7 @@ public class KineticsDemoView3D extends PlainView3D {
 		_entropyPanel = addControlPanel();
 	}
 	
+	// Add the control panel on the right side
 	private EntropyPlotPanel addControlPanel() {
 		JPanel panel = new JPanel();
 		// give a vertical layout to the control panel
@@ -54,8 +58,15 @@ public class KineticsDemoView3D extends PlainView3D {
 		this.add(panel, java.awt.BorderLayout.EAST);
 		return entropyPanel;
 	}
+	
+	@Override
+    public void prepareForExit() {
+		// Perform any necessary cleanup here (e.g., stop threads, release resources)
+		// This method can be called when the view is closed or the application exits
+		System.out.println("Prepare for exit");
+	}
 
-	//
+	// Setup thread cleanup on window close
 	private void setupAncestorCleanup(PhysicsEngine<?> engine, Timer timer) {
 		// We use a HierarchyListener to wait until the frame is actually added to a
 		// window
@@ -63,11 +74,14 @@ public class KineticsDemoView3D extends PlainView3D {
 			if ((e.getChangeFlags() & java.awt.event.HierarchyEvent.SHOWING_CHANGED) != 0) {
 				java.awt.Window parentWindow = javax.swing.SwingUtilities.getWindowAncestor(this);
 				if (parentWindow != null) {
+					System.out.println("KineticsDemoView3D: Registered window listener for cleanup.");
 					parentWindow.addWindowListener(new java.awt.event.WindowAdapter() {
 						@Override
 						public void windowClosing(java.awt.event.WindowEvent e) {
+							System.out.println("KineticsDemoView3D: Window closing detected, stopping physics engine and timer...");
 							engine.stop();
 							timer.stop();
+							System.out.println("KineticsDemoView3D: Stopped physics engine and timer on window close.");
 						}
 					});
 				}

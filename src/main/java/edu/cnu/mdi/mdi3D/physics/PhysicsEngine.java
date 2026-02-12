@@ -13,12 +13,33 @@ public class PhysicsEngine<T> implements Runnable {
 		this.model = model;
 	}
 
+    /**
+     * Request the simulation thread to stop. 
+     * The thread will exit gracefully after the current update cycle.
+     */
     public void stop() {
         this.running = false;
     }
 
+    /**
+	 * Pause the simulation. The thread will stop updating the model until resumed.
+	 */
 	public void setPaused(boolean paused) {
 		this.paused = paused;
+	}
+	
+	/**
+	 * @return true if the simulation is currently paused, false otherwise.
+	 */
+	public boolean isPaused() {
+		return paused;
+	}
+	
+	/**
+	 * Convenience method to resume the simulation if it is paused.
+	 */
+	public void resume() {
+		this.paused = false;
 	}
     
     @Override
@@ -44,6 +65,10 @@ public class PhysicsEngine<T> implements Runnable {
         }
     }
     
+    /**
+	 * @return the latest simulation snapshot. This may be called from any thread, 
+	 * but the returned snapshot should be treated as immutable.
+	 */
     public SimulationSnapshot<T> getLatestSnapshot() {
         return latestSnapshot.get();
     }
