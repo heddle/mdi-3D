@@ -10,13 +10,14 @@ import edu.cnu.mdi.mdi3D.item3D.Axes3D;
 import edu.cnu.mdi.mdi3D.item3D.Cube;
 import edu.cnu.mdi.mdi3D.item3D.PointSet3D;
 import edu.cnu.mdi.mdi3D.panel.Panel3D;
+import edu.cnu.mdi.mdi3D.physics.IPhysicsSimHost;
 import edu.cnu.mdi.mdi3D.physics.PhysicsEngine;
 import edu.cnu.mdi.mdi3D.physics.SimulationSnapshot;
 import edu.cnu.mdi.mdi3D.view3D.PlainView3D;
 import edu.cnu.mdi.properties.PropertyUtils;
 
 @SuppressWarnings("serial")
-public class KineticsDemoView3D extends PlainView3D {
+public class KineticsDemoView3D extends PlainView3D implements IPhysicsSimHost {
 
 	static final float dmax = 1f;
 
@@ -34,7 +35,7 @@ public class KineticsDemoView3D extends PlainView3D {
 	private static Color cubeColor = new Color(0, 0, 0, 10);
 	
 	//Live entropy v. time plot panel
-	private final EntropyPlotPanel _entropyPanel;
+	private EntropyPlotPanel _entropyPanel;
 	
 	//the simulation engine
 	private PhysicsEngine<Particle> engine;
@@ -46,25 +47,27 @@ public class KineticsDemoView3D extends PlainView3D {
 	private KineticsDemoView3D() {
 		super(PropertyUtils.TITLE, "Sample 3D View", PropertyUtils.ANGLE_X, thetax, PropertyUtils.ANGLE_Y, thetay,
 				PropertyUtils.ANGLE_Z, thetaz, PropertyUtils.DIST_X, xdist, PropertyUtils.DIST_Y, ydist,
-				PropertyUtils.DIST_Z, zdist, PropertyUtils.LEFT, 0, PropertyUtils.TOP, 0, PropertyUtils.FRACTION, 0.75,
-				PropertyUtils.ASPECT, 1.25);
+				PropertyUtils.DIST_Z, zdist, PropertyUtils.LEFT, 0, PropertyUtils.TOP, 0, PropertyUtils.FRACTION, 0.85,
+				PropertyUtils.ASPECT, 1.6);
 		
-		_entropyPanel = addControlPanel();
+		//add the control panel on the right side
+		addControlPanel();
 	}
 	
 	// Add the control panel on the right side
-	private EntropyPlotPanel addControlPanel() {
+	private void addControlPanel() {
 		JPanel panel = new JPanel();
 		// give a vertical layout to the control panel
 		panel.setLayout(new javax.swing.BoxLayout(panel, javax.swing.BoxLayout.Y_AXIS));
 		
-		EntropyPlotPanel entropyPanel = new EntropyPlotPanel(500);
-		panel.add(entropyPanel);
+		//the plot panel
+		_entropyPanel = new EntropyPlotPanel(450);
+		panel.add(_entropyPanel);
 		
-		this.add(panel, java.awt.BorderLayout.EAST);
-		return entropyPanel;
+		add(panel, java.awt.BorderLayout.EAST);
 	}
 	
+	// Clean up on exit
 	@Override
     public void prepareForExit() {
 		if (engine != null) {
@@ -77,8 +80,8 @@ public class KineticsDemoView3D extends PlainView3D {
 		}
 		super.prepareForExit();
 	}
-
-
+	
+	// make the 3d panel. This is where the 3D items are created
 	@Override
 	protected Panel3D make3DPanel(float angleX, float angleY, float angleZ, float xDist, float yDist, float zDist) {
 		return new Panel3D(thetax, thetay, thetaz, xdist, ydist, zdist) {
@@ -105,9 +108,7 @@ public class KineticsDemoView3D extends PlainView3D {
 				addItem(particlePoints);
 
 				//Start the physics thread
-				Thread thread = new Thread(engine, "Physics-Thread");
-				thread.start();
-				
+				engine.start();			
 
 				//Create the GUI Update Timer
 				renderTimer = new Timer(16, e -> {
@@ -135,6 +136,13 @@ public class KineticsDemoView3D extends PlainView3D {
 	 */
 	public static KineticsDemoView3D createKineticsView3D() {
 		return new KineticsDemoView3D();
+	}
+	
+	//--- IPhysicsSimHost implementation
+
+	@Override
+	public PhysicsEngine<Particle> getPhysicsEngine() {
+		return engine;
 	}
 
 }

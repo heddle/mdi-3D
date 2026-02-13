@@ -12,6 +12,13 @@ public class PhysicsEngine<T> implements Runnable {
     public PhysicsEngine(APhysicsModel<T> model) {
 		this.model = model;
 	}
+    
+    
+    public void start() {
+		Thread simThread = new Thread(this, "PhysicsEngineThread");
+		simThread.setDaemon(true); // Optional: make it a daemon thread
+		simThread.start();
+	}
 
     /**
      * Request the simulation thread to stop. 
@@ -24,7 +31,7 @@ public class PhysicsEngine<T> implements Runnable {
     /**
 	 * Pause the simulation. The thread will stop updating the model until resumed.
 	 */
-	public void setPaused(boolean paused) {
+	public void requestPaused(boolean paused) {
 		this.paused = paused;
 	}
 	
