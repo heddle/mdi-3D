@@ -2,7 +2,6 @@ package edu.cnu.mdi.mdi3D.physics;
 
 import edu.cnu.mdi.sim.Simulation;
 import edu.cnu.mdi.sim.SimulationContext;
-import edu.cnu.mdi.sim.SimulationEngine;
 import edu.cnu.mdi.sim.SimulationState;
 
 /**
@@ -31,7 +30,7 @@ public interface IPhysicsSimHost {
 	 *
 	 * @return the simulation engine (never null)
 	 */
-	PhysicsEngine getPhysicsEngine();
+	PhysicsEngine<?> getPhysicsEngine();
 
 	// ------------------------------------------------------------------------
 	// Convenience lifecycle control methods
@@ -55,7 +54,7 @@ public interface IPhysicsSimHost {
 	 * </p>
 	 */
 	default void runSimulation() {
-		//TODO implement autoRun logic in SimulationEngine and use it here
+		getPhysicsEngine().requestRun();
 	}
 
 	/**
@@ -66,7 +65,7 @@ public interface IPhysicsSimHost {
 	 * </p>
 	 */
 	default void pauseSimulation() {
-		//TODO implement
+		getPhysicsEngine().requestPause();
 	}
 
 	/**
@@ -76,7 +75,7 @@ public interface IPhysicsSimHost {
 	 * </p>
 	 */
 	default void resumeSimulation() {
-		//TODO implement
+		getPhysicsEngine().requestRun();
 	}
 
 	/**
@@ -87,7 +86,7 @@ public interface IPhysicsSimHost {
 	 * </p>
 	 */
 	default void stopSimulation() {
-		//TODO implement
+		getPhysicsEngine().requestStop();
 	}
 
 	/**

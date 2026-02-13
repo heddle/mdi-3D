@@ -12,6 +12,7 @@ import edu.cnu.mdi.mdi3D.item3D.PointSet3D;
 import edu.cnu.mdi.mdi3D.panel.Panel3D;
 import edu.cnu.mdi.mdi3D.physics.IPhysicsSimHost;
 import edu.cnu.mdi.mdi3D.physics.PhysicsEngine;
+import edu.cnu.mdi.mdi3D.physics.PhysicsSimControlPanel;
 import edu.cnu.mdi.mdi3D.physics.SimulationSnapshot;
 import edu.cnu.mdi.mdi3D.view3D.PlainView3D;
 import edu.cnu.mdi.properties.PropertyUtils;
@@ -30,6 +31,9 @@ public class KineticsDemoView3D extends PlainView3D implements IPhysicsSimHost {
 	static final float thetax = -45f;
 	static final float thetay = 45f;
 	static final float thetaz = 45f;
+	
+	// Track the time of the last update to ensure we only update on new snapshots
+	private float lastUpdateTime = Float.NEGATIVE_INFINITY;;
 
 	// cube color (with alpha for transparency)
 	private static Color cubeColor = new Color(0, 0, 0, 10);
@@ -52,6 +56,7 @@ public class KineticsDemoView3D extends PlainView3D implements IPhysicsSimHost {
 		
 		//add the control panel on the right side
 		addControlPanel();
+		addSimControls();
 	}
 	
 	// Add the control panel on the right side
@@ -67,11 +72,17 @@ public class KineticsDemoView3D extends PlainView3D implements IPhysicsSimHost {
 		add(panel, java.awt.BorderLayout.EAST);
 	}
 	
+	// Add the simulation control panel on the bottom
+	private void addSimControls() {
+		PhysicsSimControlPanel controlPanel = new PhysicsSimControlPanel(this);
+		add(controlPanel, java.awt.BorderLayout.SOUTH);
+	}
+	
 	// Clean up on exit
 	@Override
     public void prepareForExit() {
 		if (engine != null) {
-			engine.stop();
+			engine.requestStop();
 			System.out.println("Physics engine stopped in prepareForExit.");
 		}
 		if (renderTimer != null) {
@@ -107,20 +118,24 @@ public class KineticsDemoView3D extends PlainView3D implements IPhysicsSimHost {
 				final PointSet3D particlePoints = new PointSet3D(this, null, Color.red, 2f, true);
 				addItem(particlePoints);
 
-				//Start the physics thread
-				engine.start();			
-
-				//Create the GUI Update Timer
+				// Create the GUI Update Timer
 				renderTimer = new Timer(16, e -> {
-				    SimulationSnapshot<Particle> snap = engine.getLatestSnapshot();
+					SimulationSnapshot<Particle> snap = engine.getLatestSnapshot();
 
-				    if (snap != null) {
-				        // Direct reference hand-off to the JOGL PointSet3D
-				        // No loop, no new float[] allocation here!
-				        particlePoints.setCoords(snap.coords()); 
-				        _entropyPanel.addEntropy(snap.time(), snap.entropy());
-				        refresh();
-				    }
+					if (snap != null) {
+
+						float currentTime = snap.time();
+						// Only update if the snapshot is newer than the last update time
+						if (currentTime > lastUpdateTime) {
+
+							// Direct reference hand-off to the JOGL PointSet3D
+							// No loop, no new float[] allocation here!
+							particlePoints.setCoords(snap.coords());
+							_entropyPanel.addEntropy(currentTime, snap.entropy());
+							refresh();
+							lastUpdateTime = currentTime;
+						}
+					}
 				});
 				renderTimer.start();
 			} // create initial items
@@ -143,6 +158,41 @@ public class KineticsDemoView3D extends PlainView3D implements IPhysicsSimHost {
 	@Override
 	public PhysicsEngine<Particle> getPhysicsEngine() {
 		return engine;
+	}
+	
+	@Override
+	public void startSimulation() {
+		if (engine != null) {
+			engine.start();
+		}
+	}
+	
+	@Override
+	public void stopSimulation() {
+		if (engine != null) {
+			engine.requestStop();
+		}
+	}
+	
+	@Override
+	public void pauseSimulation() {
+		if (engine != null) {
+			engine.requestPause();
+		}
+	}
+	
+	@Override
+	public void resumeSimulation() {
+		if (engine != null) {
+			engine.requestResume();
+		}
+	}
+	
+	@Override
+	public void runSimulation() {
+		if (engine != null) {
+			engine.requestRun();
+		}
 	}
 
 }
