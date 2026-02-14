@@ -47,6 +47,7 @@ public class KineticsModel extends APhysicsModel<Particle> {
         initializeBuffers();
     }
     
+    // Populate the initial coordinate buffers from the internal state
     private void initializeBuffers() {
 		for (int i = 0; i < internalState.size(); i++) {
 			PhysicsParticle p = internalState.get(i);
