@@ -2,16 +2,27 @@ package edu.cnu.mdi.mdi3D.physics;
 
 import java.util.concurrent.atomic.AtomicReference;
 
+import edu.cnu.mdi.sim.SimulationState;
+
 public class PhysicsEngine<T>  {
     // Use CopyOnWriteArrayList or synchronized blocks for thread safety
 	private final APhysicsModel<T> model; 
     private final AtomicReference<SimulationSnapshot<T>> latestSnapshot = new AtomicReference<>();
-	private volatile boolean pauseRequested = false;
+	private volatile boolean pauseRequested = true; // Start paused by default
 	private volatile boolean stopRequested = false;
 	
+	// State is volatile since it's read by the EDT and written by the simulation thread.
+	private volatile SimulationState state = SimulationState.NEW;
+	
+	// The simulation thread that runs the main loop. 
+	// Marked volatile to ensure visibility across threads.
 	private volatile Thread simThread;
 
-   
+   /**
+    * Create a new PhysicsEngine with the given model. The engine will 
+    * manage the simulation loop and provide snapshots to clients.
+    * @param model
+    */
     public PhysicsEngine(APhysicsModel<T> model) {
 		this.model = model;
 	}
@@ -29,9 +40,6 @@ public class PhysicsEngine<T>  {
 		if (simThread != null) {
 			return;
 		}
-		stopRequested = false;
-		pauseRequested = false;
-
 		simThread = new Thread(this::runLoop, "SimulationEngine");
 		simThread.setDaemon(true);
 		simThread.start();
@@ -61,7 +69,6 @@ public class PhysicsEngine<T>  {
 		pauseRequested = false;
 	}
 	
-
 	/**
 	 * Request stop (normal termination).
 	 */
@@ -77,7 +84,12 @@ public class PhysicsEngine<T>  {
 		pauseRequested = false;
 	}
 
-    
+    /**
+     * The main simulation loop. This runs on the simulation thread and 
+     * repeatedly calls {@link APhysicsModel#update()} and updates the 
+     * latest snapshot. It also respects the pause and stop flags to 
+     * control execution.
+     */
     public void runLoop() {
         long lastTime = System.nanoTime();
         double nsPerTick = 1000000000.0 / 120.0; // Target 120Hz

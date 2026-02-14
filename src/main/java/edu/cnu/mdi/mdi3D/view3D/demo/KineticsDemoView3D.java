@@ -46,6 +46,13 @@ public class KineticsDemoView3D extends PlainView3D implements IPhysicsSimHost {
 	
 	//the timer that updates the GUI
 	private Timer renderTimer;
+	
+	//the model (we keep a reference here to access the entropy data for plotting)
+	private KineticsModel model;
+	
+	// the PointSet3D that will display the particles. We keep a reference here so we 
+	// can update the coordinates in the timer.
+	private PointSet3D particlePoints;
 
 	// private constructor
 	private KineticsDemoView3D() {
@@ -104,8 +111,9 @@ public class KineticsDemoView3D extends PlainView3D implements IPhysicsSimHost {
 				int particleCount = 50000;
 				double initialVolumeFraction = 0.25; // Start particles in 1/4th of the box
 
-				KineticsModel model = new KineticsModel(particleCount, initialVolumeFraction, .01f);
+				model = new KineticsModel(particleCount, initialVolumeFraction, .01f);
 				engine = new PhysicsEngine<>(model); // Ensure engine constructor is generic
+				
 				//create Axes
 				addItem(new Axes3D(this, 0, dmax, 0, dmax, 0, dmax, null, Color.darkGray, 1f, 7, 7, 8, Color.black,
 						Color.blue, new Font("SansSerif", Font.PLAIN, 11), 1));
@@ -115,7 +123,7 @@ public class KineticsDemoView3D extends PlainView3D implements IPhysicsSimHost {
 
 				// set up the initially empty point set for the particles (we will update the
 				// coordinates in the timer)
-				final PointSet3D particlePoints = new PointSet3D(this, null, Color.red, 2f, true);
+				particlePoints = new PointSet3D(this, null, Color.red, 1f, true);
 				addItem(particlePoints);
 
 				// Create the GUI Update Timer
@@ -127,13 +135,7 @@ public class KineticsDemoView3D extends PlainView3D implements IPhysicsSimHost {
 						float currentTime = snap.time();
 						// Only update if the snapshot is newer than the last update time
 						if (currentTime > lastUpdateTime) {
-
-							// Direct reference hand-off to the JOGL PointSet3D
-							// No loop, no new float[] allocation here!
-							particlePoints.setCoords(snap.coords());
-							_entropyPanel.addEntropy(currentTime, snap.entropy());
-							refresh();
-							lastUpdateTime = currentTime;
+							updateFromSnapshot(snap);
 						}
 					}
 				});
@@ -142,6 +144,15 @@ public class KineticsDemoView3D extends PlainView3D implements IPhysicsSimHost {
 
 		};
 
+	}
+	
+	private void updateFromSnapshot(SimulationSnapshot<Particle> snap) {
+		// Direct reference hand-off to the JOGL PointSet3D
+		// No loop, no new float[] allocation here!
+		particlePoints.setCoords(snap.coords());
+		_entropyPanel.addEntropy(snap.time(), snap.entropy());
+		refresh();
+		lastUpdateTime = snap.time();
 	}
 
 	/**
@@ -162,6 +173,9 @@ public class KineticsDemoView3D extends PlainView3D implements IPhysicsSimHost {
 	
 	@Override
 	public void startSimulation() {
+		System.out.println("Starting Simulation");
+		SimulationSnapshot<Particle> initSnap = model.getSnapshot();
+		updateFromSnapshot(initSnap);
 		if (engine != null) {
 			engine.start();
 		}

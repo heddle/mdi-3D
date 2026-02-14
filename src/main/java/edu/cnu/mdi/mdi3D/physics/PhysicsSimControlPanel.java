@@ -47,7 +47,7 @@ public class PhysicsSimControlPanel extends JPanel  {
 	// the host is typically a subclass of SimulationView
 	private IPhysicsSimHost host;
 
-
+	private final JButton startBtn;
 	private final JButton runBtn;
 	private final JButton pauseBtn;
 	private final JButton resumeBtn;
@@ -67,12 +67,14 @@ public class PhysicsSimControlPanel extends JPanel  {
 		JToolBar tb = new JToolBar();
 		tb.setFloatable(false);
 
+		startBtn    = toolButton(icons.start(),    "Start/Initialize");
 		runBtn    = toolButton(icons.run(),    "Run");
 		pauseBtn = toolButton(icons.pause(), "Pause");
 		resumeBtn = toolButton(icons.resume(), "Resume");
 		stopBtn = toolButton(icons.stop(), "Stop");
 		cancelBtn = toolButton(icons.cancel(), "Cancel");
 
+		tb.add(startBtn);
 		tb.add(runBtn);
 		tb.addSeparator();
 		tb.add(pauseBtn);
@@ -87,6 +89,9 @@ public class PhysicsSimControlPanel extends JPanel  {
 
 		add(bottom, BorderLayout.SOUTH);
 
+		startBtn.addActionListener(e -> { if (host != null) {
+			host.startSimulation();
+		} });
 		runBtn.addActionListener(e -> { if (host != null) {
 			host.runSimulation();
 		} });
@@ -135,26 +140,5 @@ public class PhysicsSimControlPanel extends JPanel  {
 //		cancelBtn.setEnabled(canStopOrCancel);
 	}
 
-
-	/**
-	 * If FlatLaf Extras is on the classpath, use FlatBusyLabel as a spinner/busy indicator.
-	 * Otherwise return null and we fall back to JProgressBar indeterminate.
-	 */
-	private static JComponent tryCreateFlatBusyLabel() {
-		try {
-			Class<?> c = Class.forName("com.formdev.flatlaf.extras.components.FlatBusyLabel");
-			Constructor<?> ctor = c.getConstructor();
-			Object inst = ctor.newInstance();
-			if (inst instanceof JComponent jc) {
-				jc.setName("busyIndicator");
-				jc.setAlignmentY(Component.CENTER_ALIGNMENT);
-				return jc;
-			}
-		} catch (Throwable ignored) {
-			// FlatLaf extras not present (or any other failure) => no spinner
-		}
-		return null;
-	}
-	
 
 }

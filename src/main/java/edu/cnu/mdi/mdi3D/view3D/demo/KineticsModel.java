@@ -20,6 +20,7 @@ public class KineticsModel extends APhysicsModel<Particle> {
      * Initializes the simulation.
      * @param count Number of particles.
      * @param volumeFraction Fraction of the dmax cube to populate (e.g., 0.5 for half volume).
+     * @param initialTemp Initial temperature, which determines the velocity distribution of the particles.
      */
     public KineticsModel(int count, double volumeFraction, float initialTemp) {
         this.temperature = initialTemp;
@@ -43,7 +44,17 @@ public class KineticsModel extends APhysicsModel<Particle> {
 
             internalState.add(new PhysicsParticle(px, py, pz, vx, vy, vz));
         }
+        initializeBuffers();
     }
+    
+    private void initializeBuffers() {
+		for (int i = 0; i < internalState.size(); i++) {
+			PhysicsParticle p = internalState.get(i);
+			bufferA[3 * i] = p.x;
+			bufferA[3 * i + 1] = p.y;
+			bufferA[3 * i + 2] = p.z;
+		}
+	}
 
     @Override
     public void update() {

@@ -37,7 +37,9 @@ public interface IPhysicsSimHost {
 	// ------------------------------------------------------------------------
 
 	/**
-	 * Start the simulation engine.
+	 * Start the simulation engine. This is where initializarion occurs and the
+	 * simulation thread is launched. Updates do not begin until {@link #runSimulation()} 
+	 * is called.
 	 * <p>
 	 * This is safe to call multiple times; only the first call has an effect.
 	 * </p>
