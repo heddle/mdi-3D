@@ -1,0 +1,414 @@
+package edu.cnu.mdi.mdi3D.view3D;
+
+
+import java.awt.BorderLayout;
+import java.awt.Component;
+import java.awt.Container;
+import java.util.Objects;
+
+import javax.swing.JComponent;
+import javax.swing.JSplitPane;
+import javax.swing.SwingUtilities;
+
+import edu.cnu.mdi.sim.ISimulationHost;
+import edu.cnu.mdi.sim.ProgressInfo;
+import edu.cnu.mdi.sim.Simulation;
+import edu.cnu.mdi.sim.SimulationContext;
+import edu.cnu.mdi.sim.SimulationEngine;
+import edu.cnu.mdi.sim.SimulationEngineConfig;
+import edu.cnu.mdi.sim.SimulationListener;
+import edu.cnu.mdi.sim.SimulationState;
+
+/**
+ * Base class for an MDI 3D view that hosts a {@link SimulationEngine}.
+ * <p>
+ * This is the 3D analogue of {@code edu.cnu.mdi.sim.ui.SimulationView}:
+ * the simulation engine remains UI-agnostic, while this view provides the
+ * "MDI bridge" for Swing/MDI and triggers repaint/refresh of the 3D panel
+ * on engine refresh events.
+ * </p>
+ *
+ * <h2>Layout</h2>
+ * <p>
+ * {@link PlainView3D} installs the 3D panel in {@link BorderLayout#CENTER}.
+ * This class optionally adds:
+ * </p>
+ * <ul>
+ * <li>A control panel in {@link BorderLayout#SOUTH}</li>
+ * <li>An optional diagnostics component on the right by wrapping the current
+ * CENTER component in a {@link JSplitPane}</li>
+ * </ul>
+ *
+ * <h2>Threading</h2>
+ * <p>
+ * All {@link SimulationListener} callbacks arrive on the Swing EDT (as
+ * guaranteed by {@link SimulationEngine}). Therefore {@link #onRefresh(SimulationContext)}
+ * can safely call {@link #refresh()}.
+ * </p>
+ */
+@SuppressWarnings("serial")
+public abstract class SimulationView3D extends PlainView3D implements ISimulationHost, SimulationListener {
+
+	/**
+	 * Factory for creating a simulation control panel component. Demos can supply
+	 * different factories to change the UI without subclassing views.
+	 */
+	@FunctionalInterface
+	public interface ControlPanelFactory {
+		JComponent createControlPanel();
+	}
+
+	/**
+	 * Factory for creating an optional diagnostics component (e.g. plots/inspector)
+	 * that will appear on the right side of a split pane.
+	 */
+	@FunctionalInterface
+	public interface DiagnosticFactory {
+		JComponent createDiagnostics();
+	}
+
+	/** Hosted engine (never null). */
+	protected volatile SimulationEngine engine;
+
+	/** Optional control panel component (may be null). */
+	protected final JComponent controlPanel;
+
+	/** Optional diagnostics component (may be null). */
+	protected final JComponent diagnostics;
+
+	/** If diagnostics is installed, this is the split pane (else null). */
+	protected final JSplitPane diagnosticsSplitPane;
+
+	/** Default diagnostics split fraction (main/left portion). */
+	private static final double DEFAULT_DIAG_SPLIT_FRACTION = 0.72;
+
+	// -------------------------------------------------------------------------
+	// Shared reset support (centralized pattern for demos)
+	// -------------------------------------------------------------------------
+
+	private volatile java.util.function.Supplier<edu.cnu.mdi.sim.Simulation> _pendingResetSimSupplier;
+	private volatile java.util.function.Consumer<edu.cnu.mdi.sim.SimulationEngine> _pendingResetAfterSwap;
+	private volatile boolean _pendingResetAutoStart;
+	private volatile boolean _pendingResetRefresh;
+
+	// -------------------------------------------------------------------------
+	// Constructors
+	// -------------------------------------------------------------------------
+
+	/**
+	 * Construct a simulation 3D view using default engine configuration and
+	 * including the default control panel.
+	 *
+	 * @param simulation the simulation to run (non-null)
+	 * @param keyVals    standard {@link edu.cnu.mdi.view.BaseView} key-value arguments
+	 */
+	public SimulationView3D(Simulation simulation, Object... keyVals) {
+		this(simulation, SimulationEngineConfig.defaults(), true, edu.cnu.mdi.sim.ui.SimulationControlPanel::new,
+				false, null, DEFAULT_DIAG_SPLIT_FRACTION, keyVals);
+	}
+
+	/**
+	 * Construct a simulation 3D view with optional inclusion of the default control
+	 * panel.
+	 *
+	 * @param simulation          the simulation to run (non-null)
+	 * @param config              engine configuration (non-null)
+	 * @param includeControlPanel if true, creates and adds the default control
+	 *                            panel at SOUTH
+	 * @param keyVals             standard {@link edu.cnu.mdi.view.BaseView} key-value arguments
+	 */
+	public SimulationView3D(Simulation simulation, SimulationEngineConfig config, boolean includeControlPanel,
+			Object... keyVals) {
+
+		this(simulation, config, includeControlPanel, edu.cnu.mdi.sim.ui.SimulationControlPanel::new, false, null,
+				DEFAULT_DIAG_SPLIT_FRACTION, keyVals);
+	}
+
+	/**
+	 * Construct a simulation 3D view with a caller-provided control panel factory.
+	 *
+	 * @param simulation          the simulation to run (non-null)
+	 * @param config              engine configuration (non-null)
+	 * @param includeControlPanel if true, creates and adds a control panel at SOUTH
+	 * @param factory             factory used to create the control panel component
+	 * @param keyVals             standard {@link edu.cnu.mdi.view.BaseView} key-value arguments
+	 */
+	public SimulationView3D(Simulation simulation, SimulationEngineConfig config, boolean includeControlPanel,
+			ControlPanelFactory factory, Object... keyVals) {
+
+		this(simulation, config, includeControlPanel, factory, false, null, DEFAULT_DIAG_SPLIT_FRACTION, keyVals);
+	}
+
+	/**
+	 * Construct a simulation 3D view with optional control panel and optional
+	 * diagnostics panel.
+	 *
+	 * @param simulation           the simulation to run (non-null)
+	 * @param config               engine configuration (non-null)
+	 * @param includeControlPanel  if true, creates and adds a control panel at SOUTH
+	 * @param controlPanelFactory  factory used to create the control panel component
+	 *                             (may be null if includeControlPanel is false)
+	 * @param includeDiagnostics   if true, installs a right-side diagnostics component
+	 *                             via a split pane
+	 * @param diagnosticFactory    factory used to create the diagnostics component
+	 *                             (required if includeDiagnostics is true)
+	 * @param initialSplitFraction fraction of width given to the main (left) component
+	 *                             on startup (0..1)
+	 * @param keyVals              standard {@link edu.cnu.mdi.view.BaseView} key-value arguments
+	 */
+	public SimulationView3D(Simulation simulation,
+			SimulationEngineConfig config,
+			boolean includeControlPanel,
+			ControlPanelFactory controlPanelFactory,
+			boolean includeDiagnostics,
+			DiagnosticFactory diagnosticFactory,
+			double initialSplitFraction,
+			Object... keyVals) {
+
+		super(keyVals);
+
+		Objects.requireNonNull(simulation, "simulation");
+		Objects.requireNonNull(config, "config");
+
+		// The engine gets created first since the control panel factory
+		// may want to bind to it during creation.
+		engine = new SimulationEngine(simulation, config);
+		engine.addListener(this);
+
+		// --- Control panel (SOUTH) ---
+		if (includeControlPanel) {
+			ControlPanelFactory f = (controlPanelFactory != null)
+					? controlPanelFactory
+					: edu.cnu.mdi.sim.ui.SimulationControlPanel::new;
+
+			JComponent cp = f.createControlPanel();
+			controlPanel = cp;
+
+			if (cp instanceof edu.cnu.mdi.sim.ui.ISimulationControlPanel scp) {
+				scp.bind(this);
+			}
+
+			add(cp, BorderLayout.SOUTH);
+		} else {
+			controlPanel = null;
+		}
+
+		// --- Diagnostics (right-side split) ---
+		if (includeDiagnostics) {
+			Objects.requireNonNull(diagnosticFactory, "diagnosticFactory");
+			double frac = clamp01(initialSplitFraction);
+
+			JComponent diag = diagnosticFactory.createDiagnostics();
+			diagnostics = diag;
+
+			diagnosticsSplitPane = installDiagnosticsSplit(diag, frac);
+		} else {
+			diagnostics = null;
+			diagnosticsSplitPane = null;
+		}
+
+		// Pack after structural changes (SOUTH and/or split pane)
+		pack();
+	}
+
+	private static double clamp01(double x) {
+		if (Double.isNaN(x)) {
+			return DEFAULT_DIAG_SPLIT_FRACTION;
+		}
+		return Math.max(0.0, Math.min(1.0, x));
+	}
+
+	private JSplitPane installDiagnosticsSplit(JComponent diag, double mainFraction) {
+		Objects.requireNonNull(diag, "diag");
+
+		Container cp = getContentPane();
+		if (!(cp.getLayout() instanceof BorderLayout bl)) {
+			return null;
+		}
+
+		Component center = bl.getLayoutComponent(cp, BorderLayout.CENTER);
+		if (center == null) {
+			return null;
+		}
+
+		cp.remove(center);
+
+		Component left = center;
+
+		JSplitPane sp = new JSplitPane(JSplitPane.HORIZONTAL_SPLIT, left, diag);
+
+		SwingUtilities.invokeLater(() -> {
+			try {
+				sp.setDividerLocation(mainFraction);
+			} catch (Throwable ignored) {
+			}
+		});
+
+		cp.add(sp, BorderLayout.CENTER);
+		cp.revalidate();
+		cp.repaint();
+
+		return sp;
+	}
+
+	protected JComponent getDiagnosticsComponent() {
+		return diagnostics;
+	}
+
+	@Override
+	public final SimulationEngine getSimulationEngine() {
+		return engine;
+	}
+
+	@Override
+	public void onStateChange(SimulationContext ctx, SimulationState from, SimulationState to, String reason) {
+
+		if ((to == SimulationState.TERMINATED || to == SimulationState.FAILED) && _pendingResetSimSupplier != null) {
+			java.util.function.Supplier<Simulation> supplier = _pendingResetSimSupplier;
+			java.util.function.Consumer<SimulationEngine> after = _pendingResetAfterSwap;
+			boolean autoStart = _pendingResetAutoStart;
+			boolean refresh = _pendingResetRefresh;
+
+			_pendingResetSimSupplier = null;
+			_pendingResetAfterSwap = null;
+
+			doEngineResetNow(supplier, after, autoStart, refresh);
+		}
+
+		onSimulationStateChange(ctx, from, to, reason);
+	}
+
+	@Override public void onInit(SimulationContext ctx) { onSimulationInit(ctx); }
+	@Override public void onReady(SimulationContext ctx) { onSimulationReady(ctx); }
+	@Override public void onRun(SimulationContext ctx) { onSimulationRun(ctx); }
+	@Override public void onResume(SimulationContext ctx) { onSimulationResume(ctx); }
+	@Override public void onPause(SimulationContext ctx) { onSimulationPause(ctx); }
+	@Override public void onDone(SimulationContext ctx) { onSimulationDone(ctx); }
+	@Override public void onFail(SimulationContext ctx, Throwable error) { onSimulationFail(ctx, error); }
+	@Override public void onCancelRequested(SimulationContext ctx) { onSimulationCancelRequested(ctx); }
+	@Override public void onMessage(SimulationContext ctx, String message) { onSimulationMessage(ctx, message); }
+	@Override public void onProgress(SimulationContext ctx, ProgressInfo progress) { onSimulationProgress(ctx, progress); }
+
+	@Override
+	public void onRefresh(SimulationContext ctx) {
+		onSimulationRefresh(ctx);
+
+		try {
+			// PlainView3D.refresh() forwards to the 3D panel.
+			refresh();
+		} catch (Throwable t) {
+			repaint();
+		}
+	}
+
+	// Hooks (EDT)
+	protected void onSimulationStateChange(SimulationContext ctx, SimulationState from, SimulationState to, String reason) {}
+	protected void onSimulationInit(SimulationContext ctx) {}
+	protected void onSimulationReady(SimulationContext ctx) {}
+	protected void onSimulationRun(SimulationContext ctx) {}
+	protected void onSimulationResume(SimulationContext ctx) {}
+	protected void onSimulationPause(SimulationContext ctx) {}
+	protected void onSimulationDone(SimulationContext ctx) {}
+	protected void onSimulationFail(SimulationContext ctx, Throwable error) {}
+	protected void onSimulationCancelRequested(SimulationContext ctx) {}
+	protected void onSimulationMessage(SimulationContext ctx, String message) {}
+	protected void onSimulationProgress(SimulationContext ctx, ProgressInfo progress) {}
+	protected void onSimulationRefresh(SimulationContext ctx) {}
+
+	protected final void replaceEngine(SimulationEngine newEngine) {
+		Objects.requireNonNull(newEngine, "newEngine");
+
+		if (!SwingUtilities.isEventDispatchThread()) {
+			SwingUtilities.invokeLater(() -> replaceEngine(newEngine));
+			return;
+		}
+
+		SimulationEngine old = this.engine;
+		if (old != null) {
+			try { old.removeListener(this); } catch (Throwable ignored) {}
+		}
+
+		this.engine = newEngine;
+		this.engine.addListener(this);
+
+		if (controlPanel instanceof edu.cnu.mdi.sim.ui.ISimulationControlPanel scp) {
+			try { scp.unbind(); } catch (Throwable ignored) {}
+			scp.bind(this);
+		}
+	}
+
+	protected final void requestEngineReset(java.util.function.Supplier<edu.cnu.mdi.sim.Simulation> simSupplier,
+			java.util.function.Consumer<edu.cnu.mdi.sim.SimulationEngine> afterSwap, boolean autoStart,
+			boolean refresh) {
+
+		Objects.requireNonNull(simSupplier, "simSupplier");
+
+		final SimulationEngine e = getSimulationEngine();
+		if (e == null) {
+			return;
+		}
+
+		SimulationState state = e.getState();
+
+		boolean safe = (state == SimulationState.NEW || state == SimulationState.READY
+				|| state == SimulationState.TERMINATED || state == SimulationState.FAILED);
+
+		if (safe) {
+			doEngineResetNow(simSupplier, afterSwap, autoStart, refresh);
+			return;
+		}
+
+		_pendingResetSimSupplier = simSupplier;
+		_pendingResetAfterSwap = afterSwap;
+		_pendingResetAutoStart = autoStart;
+		_pendingResetRefresh = refresh;
+
+		if (state != SimulationState.TERMINATING) {
+			e.requestStop();
+		}
+	}
+
+	private void doEngineResetNow(java.util.function.Supplier<edu.cnu.mdi.sim.Simulation> simSupplier,
+			java.util.function.Consumer<edu.cnu.mdi.sim.SimulationEngine> afterSwap, boolean autoStart,
+			boolean refresh) {
+
+		if (!SwingUtilities.isEventDispatchThread()) {
+			SwingUtilities.invokeLater(() -> doEngineResetNow(simSupplier, afterSwap, autoStart, refresh));
+			return;
+		}
+
+		final SimulationEngine oldEngine = getSimulationEngine();
+		if (oldEngine == null) {
+			return;
+		}
+
+		final SimulationEngineConfig cfg = oldEngine.getConfig();
+		final Simulation newSim = simSupplier.get();
+		final SimulationEngine newEngine = new SimulationEngine(newSim, cfg);
+
+		replaceEngine(newEngine);
+
+		if (afterSwap != null) {
+			afterSwap.accept(newEngine);
+		}
+
+		if (autoStart) {
+			startSimulation();
+		}
+		if (refresh) {
+			newEngine.requestRefresh();
+		}
+	}
+
+	public final void startAndRun() {
+		if (SwingUtilities.isEventDispatchThread()) {
+			startSimulation();
+			runSimulation();
+		} else {
+			SwingUtilities.invokeLater(() -> {
+				startSimulation();
+				runSimulation();
+			});
+		}
+	}
+}
