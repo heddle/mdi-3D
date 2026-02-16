@@ -5,6 +5,8 @@ import java.awt.BorderLayout;
 import java.awt.Component;
 import java.awt.Container;
 import java.util.Objects;
+import java.util.function.Consumer;
+import java.util.function.Supplier;
 
 import javax.swing.JComponent;
 import javax.swing.JSplitPane;
@@ -35,7 +37,7 @@ import edu.cnu.mdi.sim.SimulationState;
  * </p>
  * <ul>
  * <li>A control panel in {@link BorderLayout#SOUTH}</li>
- * <li>An optional diagnostics component on the right by wrapping the current
+ * <li>An optional diagnostics/settings component on the right by wrapping the current
  * CENTER component in a {@link JSplitPane}</li>
  * </ul>
  *
@@ -59,8 +61,9 @@ public abstract class SimulationView3D extends PlainView3D implements ISimulatio
 	}
 
 	/**
-	 * Factory for creating an optional diagnostics component (e.g. plots/inspector)
-	 * that will appear on the right side of a split pane.
+	 * Factory for creating an optional diagnostics/settings component 
+	 * (e.g. plots and/or parameter sliders) that will appear on the 
+	 * right side of a split pane.
 	 */
 	@FunctionalInterface
 	public interface DiagnosticFactory {
@@ -73,7 +76,7 @@ public abstract class SimulationView3D extends PlainView3D implements ISimulatio
 	/** Optional control panel component (may be null). */
 	protected final JComponent controlPanel;
 
-	/** Optional diagnostics component (may be null). */
+	/** Optional diagnostics/settings component (may be null). */
 	protected final JComponent diagnostics;
 
 	/** If diagnostics is installed, this is the split pane (else null). */
@@ -86,8 +89,8 @@ public abstract class SimulationView3D extends PlainView3D implements ISimulatio
 	// Shared reset support (centralized pattern for demos)
 	// -------------------------------------------------------------------------
 
-	private volatile java.util.function.Supplier<edu.cnu.mdi.sim.Simulation> _pendingResetSimSupplier;
-	private volatile java.util.function.Consumer<edu.cnu.mdi.sim.SimulationEngine> _pendingResetAfterSwap;
+	private volatile Supplier<Simulation> _pendingResetSimSupplier;
+	private volatile Consumer<SimulationEngine> _pendingResetAfterSwap;
 	private volatile boolean _pendingResetAutoStart;
 	private volatile boolean _pendingResetRefresh;
 
@@ -211,6 +214,8 @@ public abstract class SimulationView3D extends PlainView3D implements ISimulatio
 		pack();
 	}
 
+	// a simple utility to clamp a double to [0..1], 
+	// treating NaN as the default fraction
 	private static double clamp01(double x) {
 		if (Double.isNaN(x)) {
 			return DEFAULT_DIAG_SPLIT_FRACTION;
@@ -218,6 +223,8 @@ public abstract class SimulationView3D extends PlainView3D implements ISimulatio
 		return Math.max(0.0, Math.min(1.0, x));
 	}
 
+	// Install the diagnostics/settings component in a split pane on the 
+	// right side, replacing the current CENTER component.
 	private JSplitPane installDiagnosticsSplit(JComponent diag, double mainFraction) {
 		Objects.requireNonNull(diag, "diag");
 
@@ -251,6 +258,10 @@ public abstract class SimulationView3D extends PlainView3D implements ISimulatio
 		return sp;
 	}
 
+	/**
+	 * Get the diagnostics/settings component if installed.
+	 * @return diagnostics/settings component, or null if not installed
+	 */
 	protected JComponent getDiagnosticsComponent() {
 		return diagnostics;
 	}
@@ -337,8 +348,19 @@ public abstract class SimulationView3D extends PlainView3D implements ISimulatio
 		}
 	}
 
-	protected final void requestEngineReset(java.util.function.Supplier<edu.cnu.mdi.sim.Simulation> simSupplier,
-			java.util.function.Consumer<edu.cnu.mdi.sim.SimulationEngine> afterSwap, boolean autoStart,
+	/**
+	 * Request an engine reset by supplying a factory for the new simulation. If the
+	 * current engine is in a safe state, the reset will happen immediately. Otherwise
+	 * the current engine will be requested to stop, and the reset will happen as soon
+	 * as the engine reaches a safe state (TERMINATED or FAILED).
+	 *
+	 * @param simSupplier supplier for the new simulation instance (required)
+	 * @param afterSwap   optional callback that receives the new engine after it has been swapped in
+	 * @param autoStart   if true, automatically start the new engine after swapping
+	 * @param refresh     if true, request a refresh on the new engine after swapping
+	 */
+	protected final void requestEngineReset(Supplier<Simulation> simSupplier,
+			Consumer<SimulationEngine> afterSwap, boolean autoStart,
 			boolean refresh) {
 
 		Objects.requireNonNull(simSupplier, "simSupplier");
@@ -368,8 +390,10 @@ public abstract class SimulationView3D extends PlainView3D implements ISimulatio
 		}
 	}
 
-	private void doEngineResetNow(java.util.function.Supplier<edu.cnu.mdi.sim.Simulation> simSupplier,
-			java.util.function.Consumer<edu.cnu.mdi.sim.SimulationEngine> afterSwap, boolean autoStart,
+	// Perform the engine reset immediately on the EDT. 
+	// This should only be called when the current engine is in a safe state.
+	private void doEngineResetNow(Supplier<Simulation> simSupplier,
+			Consumer<SimulationEngine> afterSwap, boolean autoStart,
 			boolean refresh) {
 
 		if (!SwingUtilities.isEventDispatchThread()) {
@@ -400,6 +424,10 @@ public abstract class SimulationView3D extends PlainView3D implements ISimulatio
 		}
 	}
 
+	/**
+	 * Convenience method to start and run the simulation in one call. This is safe
+	 * to call from any thread.
+	 */
 	public final void startAndRun() {
 		if (SwingUtilities.isEventDispatchThread()) {
 			startSimulation();
