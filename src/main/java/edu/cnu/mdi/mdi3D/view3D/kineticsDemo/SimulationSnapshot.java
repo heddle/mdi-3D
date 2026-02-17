@@ -1,4 +1,4 @@
-package edu.cnu.mdi.mdi3D.physics;
+package edu.cnu.mdi.mdi3D.view3D.kineticsDemo;
 
 /**
  * Optimized snapshot containing raw coordinates for OpenGL.

@@ -1,4 +1,4 @@
-package edu.cnu.mdi.mdi3D.view3D.demo;
+package edu.cnu.mdi.mdi3D.view3D.kineticsDemo;
 
 import java.awt.Color;
 import java.awt.Dimension;
@@ -14,18 +14,25 @@ import edu.cnu.mdi.splot.plot.AReadyPlotPanel;
 import edu.cnu.mdi.splot.plot.PlotChangeType;
 import edu.cnu.mdi.ui.colors.X11Colors;
 
+@SuppressWarnings("serial")
 public class EntropyPlotPanel extends AReadyPlotPanel {
 	
 	// curve name
 	private static final String ENTROPY_CURVE = "Entropy";
 
-	
+	// default preferred width for the plot panel
+	private static final int DEFAULT_PREFERRED_WIDTH = 400;
+	private static final int DEFAULT_PREFERRED_HEIGHT = 400;
+
 	private volatile Curve entropyCurve;
 
-	public EntropyPlotPanel(int preferredWidth) {
+	/**
+	 * Create an EntropyPlotPanel with default preferred width.
+	 */
+	public EntropyPlotPanel() {
 		super(true);
-		Dimension dimension = getPreferredSize();
-		dimension.width = preferredWidth;
+		Dimension dimension = new Dimension(DEFAULT_PREFERRED_WIDTH, 
+				DEFAULT_PREFERRED_HEIGHT);
 		setPreferredSize(dimension);
 		dataSetup();
 	}
@@ -79,9 +86,9 @@ public class EntropyPlotPanel extends AReadyPlotPanel {
 
 		entropyCurve = (Curve) plotData.getCurve(ENTROPY_CURVE);
 
-		entropyCurve.setCurveDrawingMethod(CurveDrawingMethod.NONE);
-		entropyCurve.getStyle().setSymbolType(SymbolType.CIRCLE);
-		entropyCurve.getStyle().setSymbolSize(2);
+		entropyCurve.setCurveDrawingMethod(CurveDrawingMethod.CONNECT);
+		entropyCurve.getStyle().setSymbolType(SymbolType.SQUARE);
+		entropyCurve.getStyle().setSymbolSize(3);
 		entropyCurve.getStyle().setFillColor(eColor);
 		entropyCurve.getStyle().setBorderColor(null);
 	}

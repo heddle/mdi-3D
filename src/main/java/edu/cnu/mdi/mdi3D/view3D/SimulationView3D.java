@@ -210,8 +210,10 @@ public abstract class SimulationView3D extends PlainView3D implements ISimulatio
 			diagnosticsSplitPane = null;
 		}
 
-		// Pack after structural changes (SOUTH and/or split pane)
-		pack();
+		//thiis is preferred to pack() because it allows the view to be resized 
+		//by the user and still have the split pane divider in a reasonable place.
+		doLayout();
+		validate();
 	}
 
 	// a simple utility to clamp a double to [0..1], 
