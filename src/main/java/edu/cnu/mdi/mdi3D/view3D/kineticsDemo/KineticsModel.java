@@ -270,7 +270,7 @@ public class KineticsModel {
 			}
 		}
 	}
-	
+
 	// Optional reset method to reinitialize the simulation with new parameters.
 	public void reset(int count, float length, float volumeFraction, float initialTemp) {
 		internalState.clear();
@@ -296,5 +296,5 @@ public class KineticsModel {
 		initializeFrontBuffer();
 		lastEntropy = computeEntropy();
 	}
-	
+
 }

@@ -16,7 +16,7 @@ import edu.cnu.mdi.ui.colors.X11Colors;
 
 @SuppressWarnings("serial")
 public class EntropyPlotPanel extends AReadyPlotPanel {
-	
+
 	// curve name
 	private static final String ENTROPY_CURVE = "Entropy";
 
@@ -31,7 +31,7 @@ public class EntropyPlotPanel extends AReadyPlotPanel {
 	 */
 	public EntropyPlotPanel() {
 		super(true);
-		Dimension dimension = new Dimension(DEFAULT_PREFERRED_WIDTH, 
+		Dimension dimension = new Dimension(DEFAULT_PREFERRED_WIDTH,
 				DEFAULT_PREFERRED_HEIGHT);
 		setPreferredSize(dimension);
 		dataSetup();
@@ -71,7 +71,7 @@ public class EntropyPlotPanel extends AReadyPlotPanel {
 	protected String getPlotTitle() {
 		return "Entropy vs Time";
 	}
-	
+
 	public void addEntropy(double x, double y) {
 		if (entropyCurve != null) {
 			entropyCurve.add(x, y);

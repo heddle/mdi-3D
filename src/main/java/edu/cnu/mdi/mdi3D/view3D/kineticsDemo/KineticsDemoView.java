@@ -107,8 +107,8 @@ public class KineticsDemoView extends SimulationView3D {
 	public static KineticsDemoView createKineticsView() {
 		return new KineticsDemoView(PropertyUtils.TITLE, "Kinetics Demo", PropertyUtils.ANGLE_X, thetax,
 				PropertyUtils.ANGLE_Y, thetay, PropertyUtils.ANGLE_Z, thetaz, PropertyUtils.DIST_X, xdist,
-				PropertyUtils.DIST_Y, ydist, PropertyUtils.DIST_Z, zdist, PropertyUtils.LEFT, 0, PropertyUtils.TOP,
-				0, PropertyUtils.FRACTION, 0.85, PropertyUtils.ASPECT, 1.6);
+				PropertyUtils.DIST_Y, ydist, PropertyUtils.DIST_Z, zdist, PropertyUtils.FRACTION, 0.85,
+				PropertyUtils.ASPECT, 1.6);
 	}
 
 	// ---------------------------------------------------------------------

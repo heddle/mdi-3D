@@ -17,7 +17,7 @@ public class Cube extends Item3D {
 
 	// z coordinate of center of cube
 	public final float zc;
-	
+
 	//
 	public final float length;
 
@@ -26,7 +26,7 @@ public class Cube extends Item3D {
 
 	/**
 	 * Create a cube
-	 * @param panel3D 
+	 * @param panel3D
 	 * @param xc
 	 * @param yc
 	 * @param zc

@@ -65,6 +65,7 @@ public class KeyBindings3D {
 		actionMap.put("4", new KeyAction("4"));
 	}
 
+	@SuppressWarnings("serial")
 	public class KeyAction extends AbstractAction {
 
 		public KeyAction(String name) {

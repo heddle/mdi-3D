@@ -61,8 +61,8 @@ public abstract class SimulationView3D extends PlainView3D implements ISimulatio
 	}
 
 	/**
-	 * Factory for creating an optional diagnostics/settings component 
-	 * (e.g. plots and/or parameter sliders) that will appear on the 
+	 * Factory for creating an optional diagnostics/settings component
+	 * (e.g. plots and/or parameter sliders) that will appear on the
 	 * right side of a split pane.
 	 */
 	@FunctionalInterface
@@ -210,13 +210,13 @@ public abstract class SimulationView3D extends PlainView3D implements ISimulatio
 			diagnosticsSplitPane = null;
 		}
 
-		//thiis is preferred to pack() because it allows the view to be resized 
+		//thiis is preferred to pack() because it allows the view to be resized
 		//by the user and still have the split pane divider in a reasonable place.
 		doLayout();
 		validate();
 	}
 
-	// a simple utility to clamp a double to [0..1], 
+	// a simple utility to clamp a double to [0..1],
 	// treating NaN as the default fraction
 	private static double clamp01(double x) {
 		if (Double.isNaN(x)) {
@@ -225,7 +225,7 @@ public abstract class SimulationView3D extends PlainView3D implements ISimulatio
 		return Math.max(0.0, Math.min(1.0, x));
 	}
 
-	// Install the diagnostics/settings component in a split pane on the 
+	// Install the diagnostics/settings component in a split pane on the
 	// right side, replacing the current CENTER component.
 	private JSplitPane installDiagnosticsSplit(JComponent diag, double mainFraction) {
 		Objects.requireNonNull(diag, "diag");
@@ -392,7 +392,7 @@ public abstract class SimulationView3D extends PlainView3D implements ISimulatio
 		}
 	}
 
-	// Perform the engine reset immediately on the EDT. 
+	// Perform the engine reset immediately on the EDT.
 	// This should only be called when the current engine is in a safe state.
 	private void doEngineResetNow(Supplier<Simulation> simSupplier,
 			Consumer<SimulationEngine> afterSwap, boolean autoStart,

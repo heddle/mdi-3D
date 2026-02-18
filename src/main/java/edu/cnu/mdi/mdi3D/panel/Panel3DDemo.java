@@ -12,6 +12,7 @@ import edu.cnu.mdi.mdi3D.item3D.Axes3D;
 import edu.cnu.mdi.mdi3D.item3D.Cube;
 import edu.cnu.mdi.mdi3D.item3D.Cylinder;
 import edu.cnu.mdi.mdi3D.item3D.PointSet3D;
+import edu.cnu.mdi.mdi3D.item3D.Sphere;
 import edu.cnu.mdi.mdi3D.item3D.Triangle3D;
 
 @SuppressWarnings("serial")
@@ -68,6 +69,7 @@ public class Panel3DDemo extends JFrame {
 				addItem(new Cylinder(this, 0f, 0f, 0f, 300f, 300f, 300f, 50f, new Color(0, 255, 255, 128)));
 				addItem(new Cube(this, 0f, 0f, 0f, 600, new Color(0, 0, 255, 32), true));
 
+				addItem(new Sphere(this, 0f, 200f, 0f, 300, new Color(255, 255, 0, 128)));
 				int numPnt = 100;
 				Color color = Color.orange;
 				float pntSize = 10;

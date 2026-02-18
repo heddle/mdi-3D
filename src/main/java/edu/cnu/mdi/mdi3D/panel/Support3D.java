@@ -31,7 +31,7 @@ public class Support3D {
 		if (coords == null || coords.length == 0) {
 			return; // Nothing to draw
 		}
-		
+
 		GL2 gl = drawable.getGL().getGL2();
 		gl.glPointSize(size);
 
