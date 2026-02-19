@@ -2,7 +2,6 @@ package edu.cnu.mdi.mdi3D.panel;
 
 import java.awt.Color;
 
-import com.jogamp.graph.geom.SVertex;
 import com.jogamp.opengl.GL;
 import com.jogamp.opengl.GL2;
 import com.jogamp.opengl.GL2ES1;
@@ -1225,17 +1224,6 @@ public class Support3D {
 		gl.glColor4f(r, g, b, a);
 	}
 
-	/**
-	 * Get a simple vertex
-	 *
-	 * @param x the x coordinate
-	 * @param y the y coordinate
-	 * @param z the z coordinate
-	 * @return a vertex
-	 */
-	public static SVertex vertex(float x, float y, float z) {
-		return new SVertex(x, y, z, false);
-	}
 
 	/**
 	 * Convenience method to convert a variable list of floats into a float array.
