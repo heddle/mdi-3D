@@ -50,8 +50,20 @@ To run the demo from the project source:
 mvn clean package
 mvn exec:java -Dexec.mainClass="edu.cnu.mdi.mdi3D.app.DemoApp3D"
 ```
-Here are two pictures of the Kinetics simulation in DemoApp3D. The first is at the start of the simulation when
-50,000 particles are placed in the corner of a box. The second is at the end of the simulation where the
-paricles have spread throughout the box. The plot shows the increase in entropy over time.
-<img src="docs/Images/KinStart.png" width="800">
-<img src="docs/Images/KinEnd.png" width="800">
+## Kinetics Simulation Example
+
+The `DemoApp3D` includes a 3D simulation of the free expansion of a gas.
+
+- 50,000 particles initially placed in one corner of a box  
+- Real-time OpenGL rendering  
+- Entropy tracked in a synchronized 2D plot  
+- Demonstrates integration of 3D views with 2D plotting  
+
+Below: the initial state (left) and the final equilibrated state (right).
+
+<table>
+<tr>
+<td><img src="docs/Images/KinStart.png" width="450"></td>
+<td><img src="docs/Images/KinEnd.png" width="450"></td>
+</tr>
+</table>
