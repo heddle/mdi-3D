@@ -42,7 +42,7 @@ First include the core `mdi` dependency:
 The repository includes a full-featured `DemoApp3D` showcasing:
 
 - Interactive 3D globe with poltical boundaries
-- PlotView (splot integration)
+- a 3D simulation of the free expansion of a gas
 
 To run the demo from the project source:
 
@@ -50,5 +50,8 @@ To run the demo from the project source:
 mvn clean package
 mvn exec:java -Dexec.mainClass="edu.cnu.mdi.mdi3D.app.DemoApp3D"
 ```
-Here is one of the views running inside the DemoApp:
-<img src="docs/images/kinStart.png" width="900">
+Here are two pictures of the Kinetics simulation in DemoApp3D. The first is at the start of the simulation when
+50,000 particles are placed in the corner of a box. The second is at the end of the simulation where the
+paricles have spread throughout the box. The plot shows the increase in entropy over time.
+<img src="docs/Images/KinStart.png" width="800">
+<img src="docs/Images/KinEnd.png" width="800">
