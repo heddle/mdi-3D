@@ -52,12 +52,12 @@ mvn exec:java -Dexec.mainClass="edu.cnu.mdi.mdi3D.app.DemoApp3D"
 ```
 ## Kinetics Simulation Example
 
-The `DemoApp3D` includes a 3D simulation of the free expansion of a gas.
+The `DemoApp3D` includes a real-time 3D simulation of the free expansion of a gas.
 
 - 50,000 particles initially placed in one corner of a box  
 - Real-time OpenGL rendering  
 - Entropy tracked in a synchronized 2D plot  
-- Demonstrates integration of 3D views with 2D plotting  
+- Seamless integration of 3D views with 2D plotting  
 
 Below: the initial state (left) and the final equilibrated state (right).
 
