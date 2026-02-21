@@ -67,3 +67,4 @@ Below: the initial state (left) and the final equilibrated state (right).
 <td><img src="docs/Images/KinEnd.png" width="450"></td>
 </tr>
 </table>
+This example demonstrates how 3D rendering, simulation engines, and 2D plotting coexist within a single MDI desktop application.
