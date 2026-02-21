@@ -87,10 +87,11 @@ public class EntropyPlotPanel extends AReadyPlotPanel {
 		entropyCurve = (Curve) plotData.getCurve(ENTROPY_CURVE);
 
 		entropyCurve.setCurveDrawingMethod(CurveDrawingMethod.CONNECT);
-		entropyCurve.getStyle().setSymbolType(SymbolType.SQUARE);
-		entropyCurve.getStyle().setSymbolSize(3);
+		entropyCurve.getStyle().setSymbolType(SymbolType.CIRCLE);
+		entropyCurve.getStyle().setSymbolSize(4);
 		entropyCurve.getStyle().setFillColor(eColor);
-		entropyCurve.getStyle().setBorderColor(null);
+		entropyCurve.getStyle().setLineWidth(2);
+		entropyCurve.getStyle().setBorderColor(Color.red.darker());
 	}
 
 }
