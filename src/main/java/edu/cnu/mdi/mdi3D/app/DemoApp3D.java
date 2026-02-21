@@ -73,10 +73,6 @@ public class DemoApp3D extends BaseMDIApplication {
 	private DemoApp3D(Object... keyVals) {
 		super(keyVals);
 
-		// Enable the framework-managed virtual desktop lifecycle (one-shot ready +
-		// debounced relayout).
-		prepareForVirtualDesktop();
-
 		// Log environment information early.
 		Log.getInstance().info(Environment.getInstance().toString());
 
@@ -154,7 +150,8 @@ public class DemoApp3D extends BaseMDIApplication {
 		Log.getInstance().info("Application name = " + Environment.getApplicationName());
 		Log.getInstance().info("Config file = " + Environment.getInstance().getConfigurationFile());
 
-		Log.getInstance().info("DemoApp is ready.");
+		Log.getInstance().info(Environment.startupReport());
+		Log.getInstance().info("DemoApp3D is ready.");
 	}
 
 	/**
