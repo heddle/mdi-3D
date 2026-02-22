@@ -18,8 +18,8 @@
 
 	<licenses>
 		<license>
-			<name>Apache License, Version 2.0</name>
-			<url>https://www.apache.org/licenses/LICENSE-2.0.txt</url>
+			<name>MIT License</name>
+			<url>https://opensource.org/licenses/MIT</url>
 			<distribution>repo</distribution>
 		</license>
 	</licenses>
@@ -49,6 +49,7 @@
 		<maven.surefire.plugin.version>3.3.0</maven.surefire.plugin.version>
 	</properties>
 
+<<<<<<< HEAD
 	<dependencies>
 		<!-- MDI -->
 		<dependency>
@@ -99,6 +100,58 @@
 			<artifactId>jackson-databind</artifactId>
 			<version>2.17.0</version>
 		</dependency>
+=======
+  <dependencies>
+		<!-- MDI -->
+    <dependency>
+      <groupId>io.github.heddle</groupId>
+      <artifactId>mdi</artifactId>
+      <version>1.0.1-SNAPSHOT</version>
+    </dependency>
+
+		<!-- JOGL: meta-package (pulls jogl + platform natives) -->
+    <dependency>
+      <groupId>org.jogamp.jogl</groupId>
+      <artifactId>jogl-all-main</artifactId>
+      <version>2.6.0</version>
+    </dependency>
+
+		<!-- GlueGen runtime: meta-package (pulls gluegen + platform natives) -->
+    <dependency>
+      <groupId>org.jogamp.gluegen</groupId>
+      <artifactId>gluegen-rt-main</artifactId>
+      <version>2.6.0</version>
+    </dependency>
+
+		<!-- FlatLaf Look and Feel for Swing -->
+    <dependency>
+      <groupId>com.formdev</groupId>
+      <artifactId>flatlaf</artifactId>
+      <version>3.5.4</version>
+    </dependency>
+
+		<!-- FlatLaf extras -->
+    <dependency>
+      <groupId>com.formdev</groupId>
+      <artifactId>flatlaf-extras</artifactId>
+      <version>3.5.4</version>
+    </dependency>
+
+		<!-- JUnit 5 aggregate dependency (API + engine) -->
+    <dependency>
+      <groupId>org.junit.jupiter</groupId>
+      <artifactId>junit-jupiter</artifactId>
+      <version>${junit.version}</version>
+      <scope>test</scope>
+    </dependency>
+
+		<!-- (If truly needed; otherwise consider moving to mdi core) -->
+    <dependency>
+      <groupId>com.fasterxml.jackson.core</groupId>
+      <artifactId>jackson-databind</artifactId>
+      <version>2.17.0</version>
+    </dependency>
+>>>>>>> develop
 
 	</dependencies>
 
@@ -106,6 +159,7 @@
 		<plugins>
 
 			<!-- Compiler (explicit is good for reproducible builds) -->
+<<<<<<< HEAD
 			<plugin>
 				<groupId>org.apache.maven.plugins</groupId>
 				<artifactId>maven-compiler-plugin</artifactId>
@@ -118,6 +172,20 @@
 				<artifactId>maven-surefire-plugin</artifactId>
 				<version>${maven.surefire.plugin.version}</version>
 			</plugin>
+=======
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-compiler-plugin</artifactId>
+        <version>3.11.0</version>
+      </plugin>
+
+			<!-- Tests -->
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-surefire-plugin</artifactId>
+        <version>${maven.surefire.plugin.version}</version>
+      </plugin>
+>>>>>>> develop
 
 			<plugin>
 				<artifactId>maven-jar-plugin</artifactId>
@@ -131,6 +199,7 @@
 				</configuration>
 			</plugin>
 
+<<<<<<< HEAD
 
 		</plugins>
 	</build>
@@ -176,6 +245,83 @@
 							<additionalOptions>-Xdoclint:none</additionalOptions>
 						</configuration>
 					</plugin>
+=======
+	<!-- Release-only tooling (sources/javadocs/sign/publish) -->
+  <profiles>
+    <profile>
+      <id>release</id>
+      <build>
+        <plugins>
+
+					<!-- Attach sources jar -->
+          <plugin>
+            <groupId>org.apache.maven.plugins</groupId>
+            <artifactId>maven-source-plugin</artifactId>
+            <version>3.3.1</version>
+            <executions>
+              <execution>
+                <id>attach-sources</id>
+                <phase>verify</phase>
+                <goals>
+                  <goal>jar-no-fork</goal>
+                </goals>
+              </execution>
+            </executions>
+          </plugin>
+
+					<!-- Attach javadoc jar -->
+          <plugin>
+            <groupId>org.apache.maven.plugins</groupId>
+            <artifactId>maven-javadoc-plugin</artifactId>
+            <version>3.6.3</version>
+            <executions>
+              <execution>
+                <id>attach-javadocs</id>
+                <phase>verify</phase>
+                <goals>
+                  <goal>jar</goal>
+                </goals>
+              </execution>
+            </executions>
+            <configuration>
+              <additionalOptions>-Xdoclint:none</additionalOptions>
+            </configuration>
+          </plugin>
+
+					<!-- Sign artifacts -->
+          <plugin>
+            <groupId>org.apache.maven.plugins</groupId>
+            <artifactId>maven-gpg-plugin</artifactId>
+            <version>3.1.0</version>
+            <executions>
+              <execution>
+                <id>sign-artifacts</id>
+                <phase>verify</phase>
+                <goals>
+                  <goal>sign</goal>
+                </goals>
+                <configuration>
+                  <gpgArguments>
+                    <arg>--pinentry-mode</arg>
+                    <arg>loopback</arg>
+                  </gpgArguments>
+                </configuration>
+              </execution>
+            </executions>
+          </plugin>
+
+					<!-- Sonatype Central Publishing -->
+          <plugin>
+            <groupId>org.sonatype.central</groupId>
+            <artifactId>central-publishing-maven-plugin</artifactId>
+            <version>0.9.0</version>
+            <extensions>true</extensions>
+            <configuration>
+              <publishingServerId>central</publishingServerId>
+              <autoPublish>false</autoPublish>
+            </configuration>
+          </plugin>
+>>>>>>> develop
 
 					<!-- Sign artifacts -->
 					<plugin>
