@@ -15,13 +15,13 @@
   <description>JOGL-based 3D add-on for the MDI scientific visualization framework.</description>
   <url>https://github.com/heddle/mdi-3D</url>
 
-  <licenses>
-    <license>
-      <name>Apache License, Version 2.0</name>
-      <url>https://www.apache.org/licenses/LICENSE-2.0.txt</url>
-      <distribution>repo</distribution>
-    </license>
-  </licenses>
+	<licenses>
+		<license>
+			<name>MIT License</name>
+			<url>https://opensource.org/licenses/MIT</url>
+			<distribution>repo</distribution>
+		</license>
+	</licenses>
 
   <developers>
     <developer>
@@ -49,42 +49,42 @@
   </properties>
 
   <dependencies>
-    <!-- MDI -->
+		<!-- MDI -->
     <dependency>
       <groupId>io.github.heddle</groupId>
       <artifactId>mdi</artifactId>
       <version>1.0.1-SNAPSHOT</version>
     </dependency>
 
-    <!-- JOGL: meta-package (pulls jogl + platform natives) -->
+		<!-- JOGL: meta-package (pulls jogl + platform natives) -->
     <dependency>
       <groupId>org.jogamp.jogl</groupId>
       <artifactId>jogl-all-main</artifactId>
       <version>2.6.0</version>
     </dependency>
 
-    <!-- GlueGen runtime: meta-package (pulls gluegen + platform natives) -->
+		<!-- GlueGen runtime: meta-package (pulls gluegen + platform natives) -->
     <dependency>
       <groupId>org.jogamp.gluegen</groupId>
       <artifactId>gluegen-rt-main</artifactId>
       <version>2.6.0</version>
     </dependency>
 
-    <!-- FlatLaf Look and Feel for Swing -->
+		<!-- FlatLaf Look and Feel for Swing -->
     <dependency>
       <groupId>com.formdev</groupId>
       <artifactId>flatlaf</artifactId>
       <version>3.5.4</version>
     </dependency>
 
-    <!-- FlatLaf extras -->
+		<!-- FlatLaf extras -->
     <dependency>
       <groupId>com.formdev</groupId>
       <artifactId>flatlaf-extras</artifactId>
       <version>3.5.4</version>
     </dependency>
 
-    <!-- JUnit 5 aggregate dependency (API + engine) -->
+		<!-- JUnit 5 aggregate dependency (API + engine) -->
     <dependency>
       <groupId>org.junit.jupiter</groupId>
       <artifactId>junit-jupiter</artifactId>
@@ -92,7 +92,7 @@
       <scope>test</scope>
     </dependency>
 
-    <!-- (If truly needed; otherwise consider moving to mdi core) -->
+		<!-- (If truly needed; otherwise consider moving to mdi core) -->
     <dependency>
       <groupId>com.fasterxml.jackson.core</groupId>
       <artifactId>jackson-databind</artifactId>
@@ -104,14 +104,14 @@
   <build>
     <plugins>
 
-      <!-- Compiler (explicit is good for reproducible builds) -->
+			<!-- Compiler (explicit is good for reproducible builds) -->
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-compiler-plugin</artifactId>
         <version>3.11.0</version>
       </plugin>
 
-      <!-- Tests -->
+			<!-- Tests -->
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-surefire-plugin</artifactId>
@@ -121,14 +121,14 @@
     </plugins>
   </build>
 
-  <!-- Release-only tooling (sources/javadocs/sign/publish) -->
+	<!-- Release-only tooling (sources/javadocs/sign/publish) -->
   <profiles>
     <profile>
       <id>release</id>
       <build>
         <plugins>
 
-          <!-- Attach sources jar -->
+					<!-- Attach sources jar -->
           <plugin>
             <groupId>org.apache.maven.plugins</groupId>
             <artifactId>maven-source-plugin</artifactId>
@@ -144,7 +144,7 @@
             </executions>
           </plugin>
 
-          <!-- Attach javadoc jar -->
+					<!-- Attach javadoc jar -->
           <plugin>
             <groupId>org.apache.maven.plugins</groupId>
             <artifactId>maven-javadoc-plugin</artifactId>
@@ -163,7 +163,7 @@
             </configuration>
           </plugin>
 
-          <!-- Sign artifacts -->
+					<!-- Sign artifacts -->
           <plugin>
             <groupId>org.apache.maven.plugins</groupId>
             <artifactId>maven-gpg-plugin</artifactId>
@@ -185,7 +185,7 @@
             </executions>
           </plugin>
 
-          <!-- Sonatype Central Publishing -->
+					<!-- Sonatype Central Publishing -->
           <plugin>
             <groupId>org.sonatype.central</groupId>
             <artifactId>central-publishing-maven-plugin</artifactId>
