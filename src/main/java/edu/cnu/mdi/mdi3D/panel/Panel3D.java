@@ -344,7 +344,7 @@ public class Panel3D extends JPanel implements GLEventListener {
 
 	@Override
 	public void dispose(GLAutoDrawable drawable) {
-		System.err.println("called dispose");
+		// default empty implementation
 	}
 
 	public void beforeDraw(GLAutoDrawable drawable) { }
