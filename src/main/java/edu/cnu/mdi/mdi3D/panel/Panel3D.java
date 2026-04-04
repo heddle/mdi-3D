@@ -47,7 +47,7 @@ public class Panel3D extends JPanel implements GLEventListener {
 	protected GLProfile glprofile;
 	protected GLCapabilities glcapabilities;
 	protected final GLJPanel gljpanel;
-	public static GLU glu; // glu utilities
+	protected GLU glu; // glu utilities
 
 	// distance in front of the screen
 	private float _zdist;
@@ -143,14 +143,14 @@ public class Panel3D extends JPanel implements GLEventListener {
 		safeAdd(addWest(), BorderLayout.WEST);
 
 		add(gljpanel, BorderLayout.CENTER);
-
+		
 		new KeyBindings3D(this);
 
 		_mouseAdapter = new MouseAdapter3D(this);
 		gljpanel.addMouseListener(_mouseAdapter);
 		gljpanel.addMouseMotionListener(_mouseAdapter);
 		gljpanel.addMouseWheelListener(_mouseAdapter);
-
+		
 		// Set initial orientation using the same semantics as before:
 		// reset then apply rotateX/Y/Z in that order.
 		loadIdentityMatrix();
@@ -266,7 +266,6 @@ public class Panel3D extends JPanel implements GLEventListener {
 	@Override
 	public void display(GLAutoDrawable drawable) {
 
-
 		final GL2 gl = drawable.getGL().getGL2();
 
 		gl.glEnable(GL.GL_DEPTH_TEST);
@@ -342,17 +341,13 @@ public class Panel3D extends JPanel implements GLEventListener {
 		gl.glLoadIdentity();
 	}
 
-	@Override
-	public void dispose(GLAutoDrawable drawable) {
-		// default empty implementation
-	}
 
 	public void beforeDraw(GLAutoDrawable drawable) { }
 	public void afterDraw(GLAutoDrawable drawable)  { }
 
 	@Override
 	public void init(GLAutoDrawable drawable) {
-		glu = GLU.createGLU();
+        glu = new GLU();
 		GL2 gl = drawable.getGL().getGL2();
 
 		_versionStr = gl.glGetString(GL.GL_VERSION);
@@ -381,38 +376,73 @@ public class Panel3D extends JPanel implements GLEventListener {
 
 	@Override
 	public void reshape(GLAutoDrawable drawable, int x, int y, int width, int height) {
-		GL2 gl = drawable.getGL().getGL2();
+	    // glu may be null if reshape fires before init completes (can happen
+	    // when a lazily-created GLJPanel is resized before its first display).
+	    // In that case, request a repaint so init+reshape will run again cleanly.
+	    if (glu == null) {
+	        gljpanel.repaint();
+	        return;
+	    }
 
-		if (height == 0) {
-			height = 1;
-		}
+	    GL2 gl = drawable.getGL().getGL2();
 
-		float aspect = (float) width / height;
+	    if (height == 0) {
+	        height = 1;
+	    }
 
-		gl.glViewport(0, 0, width, height);
+	    float aspect = (float) width / height;
 
-		gl.glMatrixMode(GLMatrixFunc.GL_PROJECTION);
-		gl.glLoadIdentity();
+	    gl.glViewport(0, 0, width, height);
 
-		glu.gluPerspective(45.0, aspect, 0.1, 10000.0);
+	    gl.glMatrixMode(GLMatrixFunc.GL_PROJECTION);
+	    gl.glLoadIdentity();
 
-		gl.glMatrixMode(GLMatrixFunc.GL_MODELVIEW);
-		gl.glLoadIdentity();
+	    glu.gluPerspective(45.0, aspect, 0.1, 10000.0);
+
+	    gl.glMatrixMode(GLMatrixFunc.GL_MODELVIEW);
+	    gl.glLoadIdentity();
 	}
-
 	public void deltaX(float dx) { _xdist += dx; }
 	public void deltaY(float dy) { _ydist += dy; }
 	public void deltaZ(float dz) { _zdist += dz; }
 
 	public void refreshQueued() { }
 
-	public void refresh() {
-		if (gljpanel == null) {
-			return;
-		}
-		gljpanel.display();
+	/**
+	 * Soft refresh: schedules a repaint through AWT's normal paint mechanism.
+	 * Use this for layout-driven redraws (resize, move, show).
+	 * This is safe to call from the EDT and does not race with Swing painting.
+	 */
+	public void softRefresh() {
+	    if (gljpanel != null) {
+	        gljpanel.repaint();
+	    }
 	}
 
+	/**
+	 * Hard refresh: forces an immediate JOGL render.
+	 * Only call this when you need synchronous GL output, e.g. after a
+	 * mouse-drag rotation. Do NOT call from component/layout events.
+	 */
+	public void refresh() {
+	    if (gljpanel == null || !gljpanel.isDisplayable()
+	            || gljpanel.getWidth() <= 0 || gljpanel.getHeight() <= 0) {
+	        return;
+	    }
+	    gljpanel.display();
+	}
+
+	/**
+	 * Force JOGL to tear down and rebuild the GL context on next paint.
+	 * Call this once after a lazy view has been made visible with a real
+	 * native peer, to ensure the FBO is created against the correct surface.
+	 */
+	public void reinitGLContext() {
+	    if (gljpanel != null) {
+	        gljpanel.repaint();
+	    }
+	}
+	
 	/**
 	 * Adds the given item to the panel.
 	 */
@@ -607,6 +637,11 @@ public class Panel3D extends JPanel implements GLEventListener {
 	    zr += tz;
 
 	    return zr;
+	}
+
+	@Override
+	public void dispose(GLAutoDrawable drawable) {
+		// no resources to release
 	}
 
 }

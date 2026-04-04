@@ -9,6 +9,7 @@ import com.jogamp.opengl.GL2ES3;
 import com.jogamp.opengl.GLAutoDrawable;
 import com.jogamp.opengl.fixedfunc.GLLightingFunc;
 import com.jogamp.opengl.fixedfunc.GLMatrixFunc;
+import com.jogamp.opengl.glu.GLU;
 import com.jogamp.opengl.glu.GLUquadric;
 import com.jogamp.opengl.util.gl2.GLUT;
 
@@ -137,7 +138,7 @@ public class Support3D {
 	public static void drawMarker(GLAutoDrawable drawable, float x, float y, float z, Color markerColor,
 			float markerSize, boolean circular, String label, float fontSize, Color fontColor) {
 		GL2 gl = drawable.getGL().getGL2();
-
+		GLU glu = com.jogamp.opengl.glu.GLU.createGLU();
 		// Draw the marker (reuse your drawPoint method)
 		// drawPoint(drawable, x, y, z, markerColor, markerSize, circular);
 
@@ -152,8 +153,8 @@ public class Support3D {
 		// Use gluProject to map the marker's 3D position to window (screen)
 		// coordinates.
 		double[] winCoords = new double[3];
-		// Note: We are using Panel3D.glu as in your drawTube method.
-		Panel3D.glu.gluProject(x, y, z, modelview, 0, projection, 0, viewport, 0, winCoords, 0);
+		
+		glu.gluProject(x, y, z, modelview, 0, projection, 0, viewport, 0, winCoords, 0);
 
 		// Compute the text width (in pixels) using GLUT stroke font widths.
 		// The GLUT stroke font returns a width in its native coordinate system,
@@ -785,7 +786,6 @@ public class Support3D {
 		fillCoords(coords4, 1, p[1], p[3], p[4]);
 		fillCoords(coords4, 2, p[3], p[4], p[5]);
 		fillCoords(coords4, 3, p[2], p[4], p[5]);
-		// System.err.println("Found Triangles");
 		return coords4;
 	}
 
@@ -919,8 +919,10 @@ public class Support3D {
 	public static void drawTube(GLAutoDrawable drawable, float x1, float y1, float z1, float x2, float y2, float z2,
 			float radius, Color color) {
 
+		GLU glu = com.jogamp.opengl.glu.GLU.createGLU();
+
 		if (_quad == null) {
-			_quad = Panel3D.glu.gluNewQuadric();
+			_quad = glu.gluNewQuadric();
 		}
 
 		float vx = x2 - x1;
@@ -946,7 +948,7 @@ public class Support3D {
 		gl.glTranslatef(x1, y1, z1);
 		gl.glRotatef(ax, rx, ry, 0f);
 		// gluQuadricOrientation(quadric,GLU_OUTSIDE);
-		Panel3D.glu.gluCylinder(_quad, radius, radius, v, 50, 1);
+		glu.gluCylinder(_quad, radius, radius, v, 50, 1);
 
 		gl.glPopMatrix();
 	}

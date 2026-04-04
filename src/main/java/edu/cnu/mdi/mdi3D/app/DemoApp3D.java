@@ -6,6 +6,7 @@ import java.awt.EventQueue;
 import edu.cnu.mdi.app.BaseMDIApplication;
 import edu.cnu.mdi.desktop.Desktop;
 import edu.cnu.mdi.log.Log;
+import edu.cnu.mdi.mdi3D.view3D.aizawaDemo.AizawaDemoView;
 import edu.cnu.mdi.mdi3D.view3D.globe.GlobeView3D;
 import edu.cnu.mdi.mdi3D.view3D.kineticsDemo.KineticsDemoView;
 import edu.cnu.mdi.properties.PropertyUtils;
@@ -54,7 +55,7 @@ public class DemoApp3D extends BaseMDIApplication {
 	private final boolean enableVirtualDesktop = true;
 
 	/** Number of "columns"/cells in the virtual desktop. */
-	private final int virtualDesktopCols = 3;
+	private final int virtualDesktopCols = 4;
 
 	// -------------------------------------------------------------------------
 	// Sample views used by the demo. None are meant to be completely realistic.
@@ -63,7 +64,8 @@ public class DemoApp3D extends BaseMDIApplication {
 
 	private LogView logView;
 	private KineticsDemoView kineticsView;
-	private GlobeView3D globeView;
+	//private GlobeView3D globeView;
+	private AizawaDemoView aizawaView;
 
 	/**
 	 * Private constructor: use {@link #getInstance()}.
@@ -120,7 +122,9 @@ public class DemoApp3D extends BaseMDIApplication {
 		ViewManager.getInstance().getViewMenu().addSeparator();
 
 		kineticsView = KineticsDemoView.createKineticsView();
-		globeView = GlobeView3D.createGlobeView();
+	//	globeView = GlobeView3D.createGlobeView();
+		ViewManager.getInstance().addConfiguration(GlobeView3D.getConfiguration());
+		aizawaView = AizawaDemoView.createAizawaView();
 	}
 
 	@Override
@@ -183,10 +187,13 @@ public class DemoApp3D extends BaseMDIApplication {
 		virtualView.moveTo(kineticsView, 0, VirtualView.CENTER);
 
 		// Column 1: globe view centered
-		virtualView.moveTo(globeView, 1, VirtualView.CENTER);
+		//virtualView.moveTo(globeView, 1, VirtualView.CENTER);
+		
+		// Column 2: aizawa demo centered
+		virtualView.moveTo(aizawaView, 2, VirtualView.CENTER);
 
-		// column 2: log view upper left (is not vis by default)
-		virtualView.moveTo(logView, 2, VirtualView.UPPERLEFT);
+		// column 3: log view upper left (is not vis by default)
+		virtualView.moveTo(logView, 3, VirtualView.UPPERLEFT);
 
 	}
 
