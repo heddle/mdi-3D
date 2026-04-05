@@ -19,6 +19,7 @@ import edu.cnu.mdi.mdi3D.item3D.Sphere;
 import edu.cnu.mdi.mdi3D.panel.Panel3D;
 import edu.cnu.mdi.mdi3D.view3D.PlainView3D;
 import edu.cnu.mdi.properties.PropertyUtils;
+import edu.cnu.mdi.ui.fonts.Fonts;
 import edu.cnu.mdi.util.Environment;
 import edu.cnu.mdi.view.ViewConfiguration;
 import edu.cnu.mdi.view.ViewPropertiesBuilder;
@@ -179,7 +180,7 @@ public class GlobeView3D extends PlainView3D {
 					String[] cityNames = cityNames(filtered);
 					LabelSet3D cityLabels = new LabelSet3D(this, coords, cityNames);
 					cityLabels.put(Item3D.TEXT_COLOR, new Color(255, 230, 160));
-					cityLabels.put(Item3D.FONT, new Font("SansSerif", Font.PLAIN, 10));
+					cityLabels.put(Item3D.FONT, Fonts.plainFontDelta(-2));
 					cityLabels.setCull(LabelSet3D.frontHemisphereCull(0f, 0f, 0f));
 					addItem(cityLabels);
 

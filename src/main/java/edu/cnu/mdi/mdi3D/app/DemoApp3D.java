@@ -1,10 +1,7 @@
 package edu.cnu.mdi.mdi3D.app;
 
 
-import java.awt.EventQueue;
-
 import edu.cnu.mdi.app.BaseMDIApplication;
-import edu.cnu.mdi.desktop.Desktop;
 import edu.cnu.mdi.log.Log;
 import edu.cnu.mdi.mdi3D.view3D.aizawaDemo.AizawaDemoView;
 import edu.cnu.mdi.mdi3D.view3D.globe.GlobeView3D;
@@ -44,18 +41,6 @@ public class DemoApp3D extends BaseMDIApplication {
 	/** Singleton instance of the demo app. */
 	private static DemoApp3D INSTANCE;
 
-	// -------------------------------------------------------------------------
-	// Optional virtual desktop support
-	// -------------------------------------------------------------------------
-
-	/** Virtual desktop view (optional). */
-	private VirtualView virtualView;
-
-	/** If true, install the VirtualView and place views into columns. */
-	private final boolean enableVirtualDesktop = true;
-
-	/** Number of "columns"/cells in the virtual desktop. */
-	private final int virtualDesktopCols = 4;
 
 	// -------------------------------------------------------------------------
 	// Sample views used by the demo. None are meant to be completely realistic.
@@ -84,14 +69,13 @@ public class DemoApp3D extends BaseMDIApplication {
 
 		// Create internal views. (Do not depend on the outer frame being visible here.)
 		addInitialViews();
-
-		// Optionally create the virtual desktop overview.
-		// Note: VirtualView now resolves its parent frame lazily in addNotify().
-		if (enableVirtualDesktop) {
-			virtualView = VirtualView.createVirtualView(virtualDesktopCols);
-			virtualView.toFront();
-		}
 	}
+	
+	@Override
+	protected int getVirtualDesktopColumns() {
+		return 4;
+	} // opts in; 0 = disabled
+
 
 	/**
 	 * Public access to the singleton.
@@ -132,70 +116,16 @@ public class DemoApp3D extends BaseMDIApplication {
         return "mdiDemoApp";
     }
 
-	/**
-	 * Runs once after the outer frame is showing and Swing layout has stabilized.
-	 * <p>
-	 * This is the correct place to:
-	 * <ul>
-	 * <li>reconfigure the {@link VirtualView} based on the real frame size</li>
-	 * <li>apply the demo's default view placement</li>
-	 * <li>then load/apply any persisted layout (which may override defaults)</li>
-	 * </ul>
-	 */
+
+	// put the views in the virtual desktop in a reasonable default layout.
 	@Override
-	protected void onVirtualDesktopReady() {
-
-		// If virtual desktop is enabled, apply the demo defaults first.
-		if (virtualView != null) {
-			virtualView.reconfigure();
-			restoreDefaultViewLocations();
-		}
-
-		// Apply persisted configuration last, so saved layouts override demo defaults.
-		Desktop.getInstance().loadConfigurationFile();
-		Desktop.getInstance().configureViews();
-
-		Log.getInstance().info("Application name = " + Environment.getApplicationName());
-		Log.getInstance().info("Config file = " + Environment.getInstance().getConfigurationFile());
-
-		Log.getInstance().info("DemoApp is ready.");
+	protected void defaultViewLayout() {
+		VirtualView vv = VirtualView.getInstance(); // framework already owns it
+		vv.moveTo(kineticsView, 0, VirtualView.TOPCENTER);
+		vv.moveTo(aizawaView, 2, VirtualView.CENTER);
+		vv.moveTo(logView, 3, VirtualView.UPPERLEFT);
 	}
 
-	/**
-	 * Runs after the outer frame is resized or moved (debounced).
-	 * <p>
-	 * Keep this lightweight. Reconfiguring the virtual desktop updates its world
-	 * sizing and refreshes the thumbnail items.
-	 */
-	@Override
-	protected void onVirtualDesktopRelayout() {
-		if (virtualView != null) {
-			virtualView.reconfigure();
-		}
-	}
-
-	/**
-	 * Places the demo views into a reasonable "default" arrangement on the virtual
-	 * desktop.
-	 * <p>
-	 * If a user has a saved configuration, {@link Desktop#configureViews()} will
-	 * typically override these positions.
-	 */
-	private void restoreDefaultViewLocations() {
-
-		// Column 0: kinetics demo centered
-		virtualView.moveTo(kineticsView, 0, VirtualView.CENTER);
-
-		// Column 1: globe view centered
-		//virtualView.moveTo(globeView, 1, VirtualView.CENTER);
-		
-		// Column 2: aizawa demo centered
-		virtualView.moveTo(aizawaView, 2, VirtualView.CENTER);
-
-		// column 3: log view upper left (is not vis by default)
-		virtualView.moveTo(logView, 3, VirtualView.UPPERLEFT);
-
-	}
 
 
 	/**
@@ -204,10 +134,6 @@ public class DemoApp3D extends BaseMDIApplication {
 	 * @param args ignored
 	 */
 	public static void main(String[] args) {
-		EventQueue.invokeLater(() -> {
-			DemoApp3D frame = DemoApp3D.getInstance();
-			frame.restoreDefaultViewLocations();
-			frame.setVisible(true);
-		});
+		BaseMDIApplication.launch(DemoApp3D::getInstance); // launch() already exists in base
 	}
 }
