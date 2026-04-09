@@ -1,7 +1,6 @@
 package edu.cnu.mdi.mdi3D.view3D.globe;
 
 import java.awt.Color;
-import java.awt.Font;
 import java.io.IOException;
 import java.util.List;
 import java.util.Properties;
