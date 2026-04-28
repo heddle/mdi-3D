@@ -24,8 +24,17 @@ import edu.cnu.mdi.mdi3D.panel.Support3D;
  */
 public class PolyLine3D extends Item3D {
 
-	/** The polyline coordinates as [x1, y1, z1, ..., xn, yn, zn]. */
+	/** The polyline coordinate buffer. Only indices {@code [0, 3*_livePoints)} are valid. */
 	private float[] _coords;
+
+	/**
+	 * Number of live points in {@code _coords}.
+	 * <p>
+	 * When set via {@link #setCoords(float[])}, this equals {@code coords.length / 3}.
+	 * When set via {@link #setCoords(float[], int)}, the buffer may be larger and
+	 * only the first {@code livePoints} entries are drawn.
+	 */
+	private int _livePoints;
 
 	/**
 	 * Creates a 3D polyline from an array of coordinates.
@@ -38,7 +47,7 @@ public class PolyLine3D extends Item3D {
 	 */
 	public PolyLine3D(Panel3D panel3D, float[] coords, Color color, float lineWidth) {
 		super(panel3D);
-		_coords = coords;
+		setCoords(coords);
 		setLineColor(color);
 		setLineWidth(lineWidth);
 	}
@@ -46,68 +55,111 @@ public class PolyLine3D extends Item3D {
 	/**
 	 * Draws the polyline.
 	 * <p>
-	 * If there are fewer than two points, nothing is drawn.
+	 * If there are fewer than two live points, nothing is drawn.
 	 *
 	 * @param drawable the OpenGL drawable
 	 */
 	@Override
 	public void draw(GLAutoDrawable drawable) {
-		if ((_coords == null) || (_coords.length < 6)) {
+		if (_coords == null || _livePoints < 2) {
 			return;
 		}
-		Support3D.drawPolyLine(drawable, _coords, getLineColor(), getLineWidth());
+		Support3D.drawPolyLine(drawable, _coords, _livePoints, getLineColor(), getLineWidth());
 	}
 
 	/**
 	 * Replaces the coordinates of this polyline.
 	 * <p>
-	 * This is useful for animated trajectories whose vertex list changes over time.
+	 * The entire array is treated as live data; {@code _livePoints} is set to
+	 * {@code coords.length / 3}. Pass {@code null} or an empty array to produce
+	 * no output.
 	 *
-	 * @param coords the new coordinates as {@code [x1, y1, z1, ..., xn, yn, zn]}
+	 * @param coords the new coordinates as {@code [x1, y1, z1, ..., xn, yn, zn]},
+	 *               or {@code null} to clear
 	 */
 	public void setCoords(float[] coords) {
 		_coords = coords;
+		_livePoints = (coords != null) ? coords.length / 3 : 0;
 	}
 
 	/**
-	 * Gets the current polyline coordinates.
+	 * Points this polyline at a (possibly oversized) buffer, treating only the
+	 * first {@code livePoints} entries as valid data.
+	 * <p>
+	 * No copy is made. The caller must not modify indices at or beyond
+	 * {@code 3 * livePoints} while a draw is in progress. {@link Trajectory3D}
+	 * satisfies this by writing new data only after advancing {@code _pointCount}.
 	 *
-	 * @return the coordinates as {@code [x1, y1, z1, ..., xn, yn, zn]}
+	 * @param buf        the coordinate buffer; must have length &ge; {@code 3 * livePoints}
+	 * @param livePoints number of valid points in {@code buf}; must be &ge; 0
+	 * @throws IllegalArgumentException if {@code livePoints} is negative or the
+	 *                                  buffer is too small
+	 */
+	public void setCoords(float[] buf, int livePoints) {
+		if (livePoints < 0) {
+			throw new IllegalArgumentException("livePoints must be >= 0, got: " + livePoints);
+		}
+		if (buf == null && livePoints > 0) {
+			throw new IllegalArgumentException("buf is null but livePoints = " + livePoints);
+		}
+		if (buf != null && buf.length < 3 * livePoints) {
+			throw new IllegalArgumentException(
+					"buf.length (" + buf.length + ") < 3 * livePoints (" + (3 * livePoints) + ")");
+		}
+		_coords     = buf;
+		_livePoints = livePoints;
+	}
+
+	/**
+	 * Gets the current coordinate buffer.
+	 * <p>
+	 * The buffer may be larger than the live data; use {@link #getLivePoints()} to
+	 * determine how many points are valid.
+	 *
+	 * @return the coordinate buffer, or {@code null} if none has been set
 	 */
 	public float[] getCoords() {
 		return _coords;
 	}
 
 	/**
-	 * Gets the centroid of the polyline vertices.
+	 * Returns the number of live points currently held by this polyline.
+	 *
+	 * @return number of valid points in the coordinate buffer
+	 */
+	public int getLivePoints() {
+		return _livePoints;
+	}
+
+	/**
+	 * Gets the centroid of the live polyline vertices.
 	 * <p>
 	 * This is used as a representative point for sorting.
 	 *
-	 * @return the centroid of the vertices, or the origin if there are no points
+	 * @return the centroid of the live vertices, or the origin if there are none
 	 */
 	public float[] getCentroid() {
-		if ((_coords == null) || (_coords.length < 3)) {
+		if (_coords == null || _livePoints == 0) {
 			return new float[] { 0f, 0f, 0f };
 		}
 
-		final int n = _coords.length / 3;
 		float cx = 0f;
 		float cy = 0f;
 		float cz = 0f;
 
-		for (int i = 0; i < n; i++) {
+		for (int i = 0; i < _livePoints; i++) {
 			cx += _coords[3 * i];
 			cy += _coords[3 * i + 1];
 			cz += _coords[3 * i + 2];
 		}
 
-		return new float[] { cx / n, cy / n, cz / n };
+		return new float[] { cx / _livePoints, cy / _livePoints, cz / _livePoints };
 	}
 
 	/**
 	 * Gets a representative point used for item sorting.
 	 *
-	 * @return the centroid of the polyline vertices
+	 * @return the centroid of the live polyline vertices
 	 */
 	@Override
 	public float[] getSortPoint() {

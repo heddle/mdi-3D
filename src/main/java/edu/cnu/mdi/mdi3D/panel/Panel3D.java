@@ -30,19 +30,19 @@ import edu.cnu.mdi.mdi3D.item3D.Item3D;
 public class Panel3D extends JPanel implements GLEventListener {
 
 	// background default color used for r, g and b
-	public static final float BGFEFAULT = 0.9804f;
+	public static final float BG_DEFAULT = 0.9804f;
 
 	// alpha cutoff for opaque vs transparent
 	private static final int OPAQUE_ALPHA_CUTOFF = 250;
 
 	// the actual components of the background
-	private float _bgRed = BGFEFAULT;
-	private float _bgGreen = BGFEFAULT;
-	private float _bgBlue = BGFEFAULT;
+	private float _bgRed = BG_DEFAULT;
+	private float _bgGreen = BG_DEFAULT;
+	private float _bgBlue = BG_DEFAULT;
 
-	public float _xscale = 1.0f;
-	public float _yscale = 1.0f;
-	public float _zscale = 1.0f;
+	private float _xscale = 1.0f;
+	private float _yscale = 1.0f;
+	private float _zscale = 1.0f;
 
 	protected GLProfile glprofile;
 	protected GLCapabilities glcapabilities;
@@ -55,7 +55,6 @@ public class Panel3D extends JPanel implements GLEventListener {
 	// x and y translation
 	private float _xdist;
 	private float _ydist;
-
 
 	// Quaternion orientation (this IS the truth)
 	private final Quat _orientation = new Quat(); // identity by default
@@ -81,32 +80,34 @@ public class Panel3D extends JPanel implements GLEventListener {
 
 	/**
 	 * Constructor for the 3D panel.
+	 * 
 	 * @param angleX initial rotation angle around X axis (degrees)
 	 * @param angleY initial rotation angle around Y axis (degrees)
 	 * @param angleZ initial rotation angle around Z axis (degrees)
-	 * @param xDist initial X distance
-	 * @param yDist initial Y distance
-	 * @param zDist initial Z distance
+	 * @param xDist  initial X distance
+	 * @param yDist  initial Y distance
+	 * @param zDist  initial Z distance
 	 */
 	public Panel3D(float angleX, float angleY, float angleZ, float xDist, float yDist, float zDist) {
-		this(angleX, angleY, angleZ, xDist, yDist, zDist, BGFEFAULT, BGFEFAULT, BGFEFAULT, false);
+		this(angleX, angleY, angleZ, xDist, yDist, zDist, BG_DEFAULT, BG_DEFAULT, BG_DEFAULT, false);
 	}
 
 	/**
 	 * Constructor for the 3D panel.
-	 * @param angleX initial rotation angle around X axis (degrees)
-	 * @param angleY initial rotation angle around Y axis (degrees)
-	 * @param angleZ initial rotation angle around Z axis (degrees)
-	 * @param xDist initial X distance
-	 * @param yDist initial Y distance
-	 * @param zDist initial Z distance
-	 * @param bgRed red component of background color
-	 * @param bgGreen green component of background color
-	 * @param bgBlue blue component of background color
+	 * 
+	 * @param angleX        initial rotation angle around X axis (degrees)
+	 * @param angleY        initial rotation angle around Y axis (degrees)
+	 * @param angleZ        initial rotation angle around Z axis (degrees)
+	 * @param xDist         initial X distance
+	 * @param yDist         initial Y distance
+	 * @param zDist         initial Z distance
+	 * @param bgRed         red component of background color
+	 * @param bgGreen       green component of background color
+	 * @param bgBlue        blue component of background color
 	 * @param skipLastStage if true, skip the final glLoadIdentity() in display()
 	 */
-	public Panel3D(float angleX, float angleY, float angleZ, float xDist, float yDist, float zDist,
-			float bgRed, float bgGreen, float bgBlue, boolean skipLastStage) {
+	public Panel3D(float angleX, float angleY, float angleZ, float xDist, float yDist, float zDist, float bgRed,
+			float bgGreen, float bgBlue, boolean skipLastStage) {
 
 		_skipLastStage = skipLastStage;
 
@@ -143,14 +144,14 @@ public class Panel3D extends JPanel implements GLEventListener {
 		safeAdd(addWest(), BorderLayout.WEST);
 
 		add(gljpanel, BorderLayout.CENTER);
-		
+
 		new KeyBindings3D(this);
 
 		_mouseAdapter = new MouseAdapter3D(this);
 		gljpanel.addMouseListener(_mouseAdapter);
 		gljpanel.addMouseMotionListener(_mouseAdapter);
 		gljpanel.addMouseWheelListener(_mouseAdapter);
-		
+
 		// Set initial orientation using the same semantics as before:
 		// reset then apply rotateX/Y/Z in that order.
 		loadIdentityMatrix();
@@ -172,10 +173,21 @@ public class Panel3D extends JPanel implements GLEventListener {
 		}
 	}
 
-	private JComponent addNorth() { return null; }
-	private JComponent addSouth() { return null; }
-	private JComponent addEast()  { return null; }
-	private JComponent addWest()  { return null; }
+	private JComponent addNorth() {
+		return null;
+	}
+
+	private JComponent addSouth() {
+		return null;
+	}
+
+	private JComponent addEast() {
+		return null;
+	}
+
+	private JComponent addWest() {
+		return null;
+	}
 
 	public GLJPanel getGLJPanel() {
 		return gljpanel;
@@ -188,8 +200,8 @@ public class Panel3D extends JPanel implements GLEventListener {
 	}
 
 	/**
-	 * TRUE axis-angle rotation composition (restores arcball behavior).
-	 * The angle is in radians (as produced by MouseAdapter3D).
+	 * TRUE axis-angle rotation composition (restores arcball behavior). The angle
+	 * is in radians (as produced by MouseAdapter3D).
 	 */
 	public void rotate(Vector3f axis, float angleRadians) {
 		if (axis == null) {
@@ -254,8 +266,8 @@ public class Panel3D extends JPanel implements GLEventListener {
 	}
 
 	/**
-	 * Historically this reset the internal rotation matrix to identity.
-	 * Now it resets the quaternion orientation to identity (and zeroes the angle fields).
+	 * Historically this reset the internal rotation matrix to identity. Now it
+	 * resets the quaternion orientation to identity (and zeroes the angle fields).
 	 */
 	public void loadIdentityMatrix() {
 		synchronized (_orientation) {
@@ -303,7 +315,6 @@ public class Panel3D extends JPanel implements GLEventListener {
 			}
 		}
 
-
 		gl.glPushMatrix();
 		beforeDraw(drawable);
 
@@ -341,13 +352,15 @@ public class Panel3D extends JPanel implements GLEventListener {
 		gl.glLoadIdentity();
 	}
 
+	public void beforeDraw(GLAutoDrawable drawable) {
+	}
 
-	public void beforeDraw(GLAutoDrawable drawable) { }
-	public void afterDraw(GLAutoDrawable drawable)  { }
+	public void afterDraw(GLAutoDrawable drawable) {
+	}
 
 	@Override
 	public void init(GLAutoDrawable drawable) {
-        glu = new GLU();
+		glu = new GLU();
 		GL2 gl = drawable.getGL().getGL2();
 
 		_versionStr = gl.glGetString(GL.GL_VERSION);
@@ -376,73 +389,82 @@ public class Panel3D extends JPanel implements GLEventListener {
 
 	@Override
 	public void reshape(GLAutoDrawable drawable, int x, int y, int width, int height) {
-	    // glu may be null if reshape fires before init completes (can happen
-	    // when a lazily-created GLJPanel is resized before its first display).
-	    // In that case, request a repaint so init+reshape will run again cleanly.
-	    if (glu == null) {
-	        gljpanel.repaint();
-	        return;
-	    }
+		// glu may be null if reshape fires before init completes (can happen
+		// when a lazily-created GLJPanel is resized before its first display).
+		// In that case, request a repaint so init+reshape will run again cleanly.
+		if (glu == null) {
+			gljpanel.repaint();
+			return;
+		}
 
-	    GL2 gl = drawable.getGL().getGL2();
+		GL2 gl = drawable.getGL().getGL2();
 
-	    if (height == 0) {
-	        height = 1;
-	    }
+		if (height == 0) {
+			height = 1;
+		}
 
-	    float aspect = (float) width / height;
+		float aspect = (float) width / height;
 
-	    gl.glViewport(0, 0, width, height);
+		gl.glViewport(0, 0, width, height);
 
-	    gl.glMatrixMode(GLMatrixFunc.GL_PROJECTION);
-	    gl.glLoadIdentity();
+		gl.glMatrixMode(GLMatrixFunc.GL_PROJECTION);
+		gl.glLoadIdentity();
 
-	    glu.gluPerspective(45.0, aspect, 0.1, 10000.0);
+		glu.gluPerspective(45.0, aspect, 0.1, 10000.0);
 
-	    gl.glMatrixMode(GLMatrixFunc.GL_MODELVIEW);
-	    gl.glLoadIdentity();
+		gl.glMatrixMode(GLMatrixFunc.GL_MODELVIEW);
+		gl.glLoadIdentity();
 	}
-	public void deltaX(float dx) { _xdist += dx; }
-	public void deltaY(float dy) { _ydist += dy; }
-	public void deltaZ(float dz) { _zdist += dz; }
 
-	public void refreshQueued() { }
+	public void deltaX(float dx) {
+		_xdist += dx;
+	}
+
+	public void deltaY(float dy) {
+		_ydist += dy;
+	}
+
+	public void deltaZ(float dz) {
+		_zdist += dz;
+	}
+
+	public void refreshQueued() {
+	}
 
 	/**
-	 * Soft refresh: schedules a repaint through AWT's normal paint mechanism.
-	 * Use this for layout-driven redraws (resize, move, show).
-	 * This is safe to call from the EDT and does not race with Swing painting.
+	 * Soft refresh: schedules a repaint through AWT's normal paint mechanism. Use
+	 * this for layout-driven redraws (resize, move, show). This is safe to call
+	 * from the EDT and does not race with Swing painting.
 	 */
 	public void softRefresh() {
-	    if (gljpanel != null) {
-	        gljpanel.repaint();
-	    }
+		if (gljpanel != null) {
+			gljpanel.repaint();
+		}
 	}
 
 	/**
-	 * Hard refresh: forces an immediate JOGL render.
-	 * Only call this when you need synchronous GL output, e.g. after a
-	 * mouse-drag rotation. Do NOT call from component/layout events.
+	 * Hard refresh: forces an immediate JOGL render. Only call this when you need
+	 * synchronous GL output, e.g. after a mouse-drag rotation. Do NOT call from
+	 * component/layout events.
 	 */
 	public void refresh() {
-	    if (gljpanel == null || !gljpanel.isDisplayable()
-	            || gljpanel.getWidth() <= 0 || gljpanel.getHeight() <= 0) {
-	        return;
-	    }
-	    gljpanel.display();
+		if (gljpanel == null || !gljpanel.isDisplayable() || gljpanel.getWidth() <= 0 || gljpanel.getHeight() <= 0) {
+			return;
+		}
+		gljpanel.display();
 	}
 
 	/**
-	 * Force JOGL to tear down and rebuild the GL context on next paint.
-	 * Call this once after a lazy view has been made visible with a real
-	 * native peer, to ensure the FBO is created against the correct surface.
+	 * Force JOGL to tear down and rebuild the GL context on next paint. Call this
+	 * once after a lazy view has been made visible with a real native peer, to
+	 * ensure the FBO is created against the correct surface.
 	 */
 	public void reinitGLContext() {
-	    if (gljpanel != null) {
-	        gljpanel.repaint();
-	    }
+		if (gljpanel != null) {
+			gljpanel.repaint();
+		}
 	}
-	
+
 	/**
 	 * Adds the given item to the panel.
 	 */
@@ -482,8 +504,36 @@ public class Panel3D extends JPanel implements GLEventListener {
 	}
 
 	/**
-	 * Projects the given object coordinates (objX, objY, objZ) to window coordinates.
-	 * The result is stored in winPos[0] (x), winPos[1] (y), winPos[2] (z).
+	 * Returns the current X scale factor.
+	 * 
+	 * @return the current X scale factor
+	 */
+	public float getXScale() {
+		return _xscale;
+	}
+
+	/**
+	 * Returns the current Y scale factor.
+	 * 
+	 * @return the current Y scale factor
+	 */
+	public float getYScale() {
+		return _yscale;
+	}
+
+	/**
+	 * Returns the current Z scale factor.
+	 * 
+	 * @return the current Z scale factor
+	 */
+	public float getZScale() {
+		return _zscale;
+	}
+
+	/**
+	 * Projects the given object coordinates (objX, objY, objZ) to window
+	 * coordinates. The result is stored in winPos[0] (x), winPos[1] (y), winPos[2]
+	 * (z).
 	 */
 	public void project(GL2 gl, float objX, float objY, float objZ, float winPos[]) {
 		int[] view = new int[4];
@@ -498,7 +548,9 @@ public class Panel3D extends JPanel implements GLEventListener {
 		glu.gluProject(objX, objY, objZ, model, 0, proj, 0, view, 0, winPos, 0);
 	}
 
-	public float getZStep() { return 0.1f; }
+	public float getZStep() {
+		return 0.1f;
+	}
 
 	private boolean isTransparent(Item3D item) {
 		try {
@@ -506,14 +558,16 @@ public class Panel3D extends JPanel implements GLEventListener {
 			if (fa >= 0 && fa < OPAQUE_ALPHA_CUTOFF) {
 				return true;
 			}
-		} catch (Exception ignored) { }
+		} catch (Exception ignored) {
+		}
 
 		try {
 			int la = item.getLineAlpha();
 			if (la >= 0 && la < OPAQUE_ALPHA_CUTOFF) {
 				return true;
 			}
-		} catch (Exception ignored) { }
+		} catch (Exception ignored) {
+		}
 
 		return false;
 	}
@@ -525,9 +579,17 @@ public class Panel3D extends JPanel implements GLEventListener {
 		// w + xi + yj + zk
 		float w = 1f, x = 0f, y = 0f, z = 0f;
 
-		void setIdentity() { w = 1f; x = y = z = 0f; }
+		void setIdentity() {
+			w = 1f;
+			x = y = z = 0f;
+		}
 
-		void set(Quat q) { this.w = q.w; this.x = q.x; this.y = q.y; this.z = q.z; }
+		void set(Quat q) {
+			this.w = q.w;
+			this.x = q.x;
+			this.y = q.y;
+			this.z = q.z;
+		}
 
 		static Quat fromAxisAngle(float ax, float ay, float az, float angleRad) {
 			float half = 0.5f * angleRad;
@@ -557,7 +619,10 @@ public class Panel3D extends JPanel implements GLEventListener {
 				setIdentity();
 				return;
 			}
-			w /= n; x /= n; y /= n; z /= n;
+			w /= n;
+			x /= n;
+			y /= n;
+			z /= n;
 		}
 
 		/**
@@ -570,18 +635,18 @@ public class Panel3D extends JPanel implements GLEventListener {
 			float wx = w * x, wy = w * y, wz = w * z;
 
 			// Column-major (OpenGL)
-			m[0]  = 1f - 2f * (yy + zz);
-			m[1]  = 2f * (xy + wz);
-			m[2]  = 2f * (xz - wy);
-			m[3]  = 0f;
+			m[0] = 1f - 2f * (yy + zz);
+			m[1] = 2f * (xy + wz);
+			m[2] = 2f * (xz - wy);
+			m[3] = 0f;
 
-			m[4]  = 2f * (xy - wz);
-			m[5]  = 1f - 2f * (xx + zz);
-			m[6]  = 2f * (yz + wx);
-			m[7]  = 0f;
+			m[4] = 2f * (xy - wz);
+			m[5] = 1f - 2f * (xx + zz);
+			m[6] = 2f * (yz + wx);
+			m[7] = 0f;
 
-			m[8]  = 2f * (xz + wy);
-			m[9]  = 2f * (yz - wx);
+			m[8] = 2f * (xz + wy);
+			m[9] = 2f * (yz - wx);
 			m[10] = 1f - 2f * (xx + yy);
 			m[11] = 0f;
 
@@ -594,54 +659,52 @@ public class Panel3D extends JPanel implements GLEventListener {
 
 	private void sortTransparentBackToFront(java.util.List<Item3D> transparent) {
 
-	    // Copy rotation matrix once (already computed for glMultMatrixf)
-	    final float[] R = _rotMat;
+		// Copy rotation matrix once (already computed for glMultMatrixf)
+		final float[] R = _rotMat;
 
-	    // Cache camera translation as well (your view translate happens before rotation)
-	    final float tx = _xdist;
-	    final float ty = _ydist;
-	    final float tz = _zdist;
+		// Cache camera translation as well (your view translate happens before
+		// rotation)
+		final float tx = _xdist;
+		final float ty = _ydist;
+		final float tz = _zdist;
 
-	    // Cache scales
-	    final float sx = _xscale, sy = _yscale, sz = _zscale;
+		// Cache scales
+		final float sx = _xscale, sy = _yscale, sz = _zscale;
 
-	    java.util.Collections.sort(transparent, (a, b) -> {
-	        float za = viewZ(a, R, sx, sy, sz, tx, ty, tz);
-	        float zb = viewZ(b, R, sx, sy, sz, tx, ty, tz);
-	        int c = Float.compare(za, zb);           // ascending: more negative first
-	        if (c != 0) {
+		java.util.Collections.sort(transparent, (a, b) -> {
+			float za = viewZ(a, R, sx, sy, sz, tx, ty, tz);
+			float zb = viewZ(b, R, sx, sy, sz, tx, ty, tz);
+			int c = Float.compare(za, zb); // ascending: more negative first
+			if (c != 0) {
 				return c;
 			}
-	        return Integer.compare(System.identityHashCode(a), System.identityHashCode(b));
-	    });	}
+			return Integer.compare(System.identityHashCode(a), System.identityHashCode(b));
+		});
+	}
 
 	/**
-	 * Compute approximate view-space Z for an item using its sort point.
-	 * We build a view transform equivalent to:
-	 *   v = R * (S * p) + T
-	 * and return v.z.
+	 * Compute approximate view-space Z for an item using its sort point. We build a
+	 * view transform equivalent to: v = R * (S * p) + T and return v.z.
 	 */
 	private float viewZ(Item3D item, float[] R, float sx, float sy, float sz, float tx, float ty, float tz) {
-	    float[] p = item.getSortPoint();
+		float[] p = item.getSortPoint();
 
-	    float x = p[0];
-	    float y = p[1];
-	    float z = p[2];
+// Scale first (GL_MODELVIEW applies: Translate, then Scale, then Rotate)
+		float x = p[0] * sx;
+		float y = p[1] * sy;
+		float z = p[2] * sz;
 
-	    float zr = R[2] * x + R[6] * y + R[10] * z;
+// Apply the Z row of the column-major rotation matrix: R[2], R[6], R[10]
+		float zr = R[2] * x + R[6] * y + R[10] * z;
 
-	    // Then scale (because your GL does Translate -> Scale -> Rotate)
-	    zr *= sz;
+// Then translate
+		zr += tz;
 
-	    // Then translate
-	    zr += tz;
-
-	    return zr;
+		return zr;
 	}
-
+	
 	@Override
 	public void dispose(GLAutoDrawable drawable) {
-		// no resources to release
+	    // no resources to release
 	}
-
 }

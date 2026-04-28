@@ -3,6 +3,7 @@ package edu.cnu.mdi.mdi3D.adapter3D;
 import java.awt.Component;
 import java.awt.KeyboardFocusManager;
 import java.awt.event.ActionEvent;
+import java.awt.event.KeyEvent;
 
 import javax.swing.AbstractAction;
 import javax.swing.ActionMap;
@@ -11,8 +12,6 @@ import javax.swing.JComponent;
 import javax.swing.KeyStroke;
 import javax.swing.text.JTextComponent;
 
-import com.jogamp.newt.event.InputEvent;
-import com.jogamp.newt.event.KeyEvent;
 
 import edu.cnu.mdi.mdi3D.panel.Panel3D;
 
@@ -38,9 +37,6 @@ public class KeyBindings3D {
 		inputMap.put(KeyStroke.getKeyStroke(KeyEvent.VK_X, 0), "x");
 		inputMap.put(KeyStroke.getKeyStroke(KeyEvent.VK_Y, 0), "y");
 		inputMap.put(KeyStroke.getKeyStroke(KeyEvent.VK_Z, 0), "z");
-		inputMap.put(KeyStroke.getKeyStroke(KeyEvent.VK_X, InputEvent.SHIFT_MASK), "X");
-		inputMap.put(KeyStroke.getKeyStroke(KeyEvent.VK_Y, InputEvent.SHIFT_MASK), "Y");
-		inputMap.put(KeyStroke.getKeyStroke(KeyEvent.VK_Z, InputEvent.SHIFT_MASK), "Z");
 		inputMap.put(KeyStroke.getKeyStroke(KeyEvent.VK_1, 0), "1");
 		inputMap.put(KeyStroke.getKeyStroke(KeyEvent.VK_2, 0), "2");
 		inputMap.put(KeyStroke.getKeyStroke(KeyEvent.VK_3, 0), "3");
@@ -56,9 +52,6 @@ public class KeyBindings3D {
 		actionMap.put("x", new KeyAction("x"));
 		actionMap.put("y", new KeyAction("y"));
 		actionMap.put("z", new KeyAction("z"));
-		actionMap.put("X", new KeyAction("X"));
-		actionMap.put("Y", new KeyAction("Y"));
-		actionMap.put("Z", new KeyAction("Z"));
 		actionMap.put("1", new KeyAction("1"));
 		actionMap.put("2", new KeyAction("2"));
 		actionMap.put("3", new KeyAction("3"));

@@ -5,11 +5,11 @@ import java.io.IOException;
 import java.util.List;
 import java.util.Properties;
 
-import edu.cnu.mdi.mapping.GeoJsonCityLoader;
-import edu.cnu.mdi.mapping.GeoJsonCityLoader.CityFeature;
-import edu.cnu.mdi.mapping.GeoJsonCountryLoader;
-import edu.cnu.mdi.mapping.GeoJsonCountryLoader.CountryFeature;
 import edu.cnu.mdi.mapping.MapResources;
+import edu.cnu.mdi.mapping.loader.GeoJsonCityLoader;
+import edu.cnu.mdi.mapping.loader.GeoJsonCityLoader.CityFeature;
+import edu.cnu.mdi.mapping.loader.GeoJsonCountryLoader;
+import edu.cnu.mdi.mapping.loader.GeoJsonCountryLoader.CountryFeature;
 import edu.cnu.mdi.mdi3D.item3D.GlobeCountryLines3D;
 import edu.cnu.mdi.mdi3D.item3D.Item3D;
 import edu.cnu.mdi.mdi3D.item3D.LabelSet3D;
@@ -17,9 +17,9 @@ import edu.cnu.mdi.mdi3D.item3D.PointSet3D;
 import edu.cnu.mdi.mdi3D.item3D.Sphere;
 import edu.cnu.mdi.mdi3D.panel.Panel3D;
 import edu.cnu.mdi.mdi3D.view3D.PlainView3D;
-import edu.cnu.mdi.properties.PropertyUtils;
 import edu.cnu.mdi.ui.fonts.Fonts;
 import edu.cnu.mdi.util.Environment;
+import edu.cnu.mdi.util.PropertyUtils;
 import edu.cnu.mdi.view.ViewConfiguration;
 import edu.cnu.mdi.view.ViewPropertiesBuilder;
 import edu.cnu.mdi.view.VirtualView;
@@ -138,6 +138,8 @@ public class GlobeView3D extends PlainView3D {
 	@Override
 	protected Panel3D make3DPanel(float angleX, float angleY, float angleZ, float xDist, float yDist, float zDist) {
 
+		String resPrefix = Environment.MDI_RESOURCE_PATH;
+
 		// Dark background reads nicely for a globe and linework.
 		Panel3D panel = new Panel3D(angleX, angleY, angleZ, xDist, yDist, zDist, 0f, 0f, 0f, false) {
 			
@@ -152,7 +154,9 @@ public class GlobeView3D extends PlainView3D {
 				addItem(globe);
 
 				try {
-					List<CountryFeature> features = GeoJsonCountryLoader.loadFromResource(countriesResource);
+					List<CountryFeature> features = GeoJsonCountryLoader
+							.loadFromResourceStatic(resPrefix + MapResources.COUNTRIES_GEOJSON);
+
 					GlobeCountryLines3D lines = new GlobeCountryLines3D(this, features, radius);
 					lines.setLineColor(new Color(230, 230, 230));
 					lines.setLineWidth(1.0f);
@@ -165,18 +169,18 @@ public class GlobeView3D extends PlainView3D {
 
 				try {
 					var cities = GeoJsonCityLoader
-							.loadFromResource(Environment.MDI_RESOURCE_PATH + MapResources.CITIES_GEOJSON);
+							.loadFromResourceStatic(Environment.MDI_RESOURCE_PATH + MapResources.CITIES_GEOJSON);
 
 					var filtered = cities.stream()
-							.filter(c -> (c.getScalerank() >= 0 && c.getScalerank() <= 3)
-									|| c.getPopulation() >= 2_000_000)
+							.filter(c -> c.getPopulation() >= 2_000_000)
 							.toList();
-
+					
 					float[] coords = buildCityCoords(filtered, radius, 0.01f);
 					PointSet3D cityPoints = new PointSet3D(this, coords, new Color(255, 210, 120), 4.0f, true);
 					addItem(cityPoints);
 
 					String[] cityNames = cityNames(filtered);
+					
 					LabelSet3D cityLabels = new LabelSet3D(this, coords, cityNames);
 					cityLabels.put(Item3D.TEXT_COLOR, new Color(255, 230, 160));
 					cityLabels.put(Item3D.FONT, Fonts.plainFontDelta(-2));

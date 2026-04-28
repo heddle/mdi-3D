@@ -20,7 +20,7 @@ import edu.cnu.mdi.sim.SimulationEngine;
 import edu.cnu.mdi.sim.SimulationEngineConfig;
 import edu.cnu.mdi.sim.SimulationListener;
 import edu.cnu.mdi.sim.SimulationState;
-import edu.cnu.mdi.properties.PropertyUtils;
+import edu.cnu.mdi.util.PropertyUtils;
 
 /**
  * Base class for an MDI 3D view that hosts a {@link SimulationEngine}.

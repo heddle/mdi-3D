@@ -6,8 +6,8 @@ import edu.cnu.mdi.log.Log;
 import edu.cnu.mdi.mdi3D.view3D.aizawaDemo.AizawaDemoView;
 import edu.cnu.mdi.mdi3D.view3D.globe.GlobeView3D;
 import edu.cnu.mdi.mdi3D.view3D.kineticsDemo.KineticsDemoView;
-import edu.cnu.mdi.properties.PropertyUtils;
 import edu.cnu.mdi.util.Environment;
+import edu.cnu.mdi.util.PropertyUtils;
 import edu.cnu.mdi.view.LogView;
 import edu.cnu.mdi.view.ViewManager;
 import edu.cnu.mdi.view.VirtualView;
@@ -49,7 +49,6 @@ public class DemoApp3D extends BaseMDIApplication {
 
 	private LogView logView;
 	private KineticsDemoView kineticsView;
-	//private GlobeView3D globeView;
 	private AizawaDemoView aizawaView;
 
 	/**
@@ -106,8 +105,10 @@ public class DemoApp3D extends BaseMDIApplication {
 		ViewManager.getInstance().getViewMenu().addSeparator();
 
 		kineticsView = KineticsDemoView.createKineticsView();
-	//	globeView = GlobeView3D.createGlobeView();
+		
+		// globe has lazy loading
 		ViewManager.getInstance().addConfiguration(GlobeView3D.getConfiguration());
+		
 		aizawaView = AizawaDemoView.createAizawaView();
 	}
 

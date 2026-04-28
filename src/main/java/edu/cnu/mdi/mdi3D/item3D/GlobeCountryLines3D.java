@@ -8,7 +8,7 @@ import java.util.Objects;
 
 import com.jogamp.opengl.GLAutoDrawable;
 
-import edu.cnu.mdi.mapping.GeoJsonCountryLoader.CountryFeature;
+import edu.cnu.mdi.mapping.loader.GeoJsonCountryLoader.CountryFeature;
 import edu.cnu.mdi.mdi3D.panel.Panel3D;
 import edu.cnu.mdi.mdi3D.panel.Support3D;
 

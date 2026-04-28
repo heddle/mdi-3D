@@ -13,7 +13,7 @@ import javax.swing.SwingUtilities;
 
 import edu.cnu.mdi.container.IContainer;
 import edu.cnu.mdi.mdi3D.panel.Panel3D;
-import edu.cnu.mdi.properties.PropertyUtils;
+import edu.cnu.mdi.util.PropertyUtils;
 import edu.cnu.mdi.view.BaseView;
 
 /**

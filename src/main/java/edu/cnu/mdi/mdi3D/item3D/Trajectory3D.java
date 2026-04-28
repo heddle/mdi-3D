@@ -24,6 +24,15 @@ import edu.cnu.mdi.mdi3D.panel.Panel3D;
  * This implementation uses a simple array shift when discarding old points.
  * That keeps the code straightforward and is usually adequate for demo-scale
  * trajectories.
+ *
+ * <h2>Allocation strategy</h2>
+ * <p>
+ * A single backing buffer is owned by this class and never exposed to
+ * {@link PolyLine3D}'s drawing path as a trimmed copy. Instead,
+ * {@link PolyLine3D#setCoords(float[], int)} is used so the draw loop reads
+ * only the live slice of the buffer, eliminating the per-append allocation that
+ * the naive {@code Arrays.copyOf} approach would incur.
+ * </p>
  */
 public class Trajectory3D extends PolyLine3D {
 
@@ -40,6 +49,13 @@ public class Trajectory3D extends PolyLine3D {
 	 * by available memory.
 	 */
 	private final int _maxPoints;
+
+	/**
+	 * The backing coordinate buffer. Only indices {@code [0, 3 * _pointCount)} are
+	 * valid. This buffer is handed directly to {@link PolyLine3D} via
+	 * {@link PolyLine3D#setCoords(float[], int)} to avoid copying on every append.
+	 */
+	private float[] _buf;
 
 	/**
 	 * Creates an unbounded trajectory with a default initial capacity.
@@ -79,62 +95,53 @@ public class Trajectory3D extends PolyLine3D {
 	 *                        than 2 are promoted to 2
 	 */
 	public Trajectory3D(Panel3D panel3D, Color color, float lineWidth, int maxPoints, int initialCapacity) {
-		super(panel3D, new float[3 * Math.max(2, initialCapacity)], color, lineWidth);
-		_maxPoints = maxPoints;
+		super(panel3D, null, color, lineWidth);
+		_maxPoints  = maxPoints;
 		_pointCount = 0;
-
-		// Start with an empty visible trajectory rather than a zero-filled dummy one.
-		setCoords(new float[0]);
+		_buf        = new float[3 * Math.max(2, initialCapacity)];
+		// Tell the parent about the buffer now so getCoords() is never null.
+		setCoords(_buf, 0);
 	}
 
 	/**
 	 * Appends a new point to the end of the trajectory.
 	 * <p>
 	 * If the trajectory has a fixed maximum size and is already full, the oldest
-	 * point is discarded before the new point is appended.
+	 * point is discarded before the new point is appended. No allocation occurs
+	 * unless the backing buffer needs to grow.
 	 *
 	 * @param x the x coordinate of the new point
 	 * @param y the y coordinate of the new point
 	 * @param z the z coordinate of the new point
 	 */
 	public void append(float x, float y, float z) {
-		float[] coords = getCoords();
 
-		// If we are using an empty display array after construction or clear, allocate
-		// a real backing array now.
-		if (coords == null || coords.length == 0) {
-			coords = new float[3 * DEFAULT_INITIAL_CAPACITY];
-		}
-
-		// If capped and full, discard the oldest point by shifting left one point.
-		if ((_maxPoints > 0) && (_pointCount >= _maxPoints)) {
-			System.arraycopy(coords, 3, coords, 0, 3 * (_pointCount - 1));
+		// If capped and full, evict the oldest point by shifting left one slot.
+		if (_maxPoints > 0 && _pointCount >= _maxPoints) {
+			System.arraycopy(_buf, 3, _buf, 0, 3 * (_pointCount - 1));
 			_pointCount--;
 		}
 
-		// Ensure capacity for one more point.
-		if (3 * (_pointCount + 1) > coords.length) {
-			int newCapacityPoints = Math.max(2 * Math.max(1, _pointCount), _pointCount + 1);
-
+		// Grow the backing buffer if needed (amortised O(log n) allocations total).
+		if (3 * (_pointCount + 1) > _buf.length) {
+			int newCapPoints = Math.max(2 * Math.max(1, _pointCount), _pointCount + 1);
 			if (_maxPoints > 0) {
-				newCapacityPoints = Math.min(newCapacityPoints, _maxPoints);
+				newCapPoints = Math.min(newCapPoints, _maxPoints);
 			}
-
-			float[] newCoords = new float[3 * newCapacityPoints];
-			System.arraycopy(coords, 0, newCoords, 0, 3 * _pointCount);
-			coords = newCoords;
+			float[] newBuf = new float[3 * newCapPoints];
+			System.arraycopy(_buf, 0, newBuf, 0, 3 * _pointCount);
+			_buf = newBuf;
 		}
 
-		int index = 3 * _pointCount;
-		coords[index] = x;
-		coords[index + 1] = y;
-		coords[index + 2] = z;
+		// Write the new point.
+		int i = 3 * _pointCount;
+		_buf[i]     = x;
+		_buf[i + 1] = y;
+		_buf[i + 2] = z;
 		_pointCount++;
 
-		// Publish only the active portion of the coordinate buffer for drawing.
-		float[] active = new float[3 * _pointCount];
-		System.arraycopy(coords, 0, active, 0, active.length);
-		setCoords(active);
+		// Publish the live window — no copy, just update the live-point count.
+		setCoords(_buf, _pointCount);
 	}
 
 	/**
@@ -155,11 +162,12 @@ public class Trajectory3D extends PolyLine3D {
 	 * Removes all points from the trajectory.
 	 * <p>
 	 * After calling this method, nothing will be drawn until at least two points
-	 * have been appended.
+	 * have been appended. The backing buffer is retained so that a subsequent
+	 * fill does not re-allocate.
 	 */
 	public void clear() {
 		_pointCount = 0;
-		setCoords(new float[0]);
+		setCoords(_buf, 0);
 	}
 
 	/**
