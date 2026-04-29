@@ -6,6 +6,7 @@ import edu.cnu.mdi.log.Log;
 import edu.cnu.mdi.mdi3D.view3D.aizawaDemo.AizawaDemoView;
 import edu.cnu.mdi.mdi3D.view3D.globe.GlobeView3D;
 import edu.cnu.mdi.mdi3D.view3D.kineticsDemo.KineticsDemoView;
+import edu.cnu.mdi.mdi3D.view3D.scatterDemo.ScatterPlot3DDemo;
 import edu.cnu.mdi.util.Environment;
 import edu.cnu.mdi.util.PropertyUtils;
 import edu.cnu.mdi.view.LogView;
@@ -50,6 +51,7 @@ public class DemoApp3D extends BaseMDIApplication {
 	private LogView logView;
 	private KineticsDemoView kineticsView;
 	private AizawaDemoView aizawaView;
+	private ScatterPlot3DDemo scatterPlot3DView;
 
 	/**
 	 * Private constructor: use {@link #getInstance()}.
@@ -58,10 +60,6 @@ public class DemoApp3D extends BaseMDIApplication {
 	 */
 	private DemoApp3D(Object... keyVals) {
 		super(keyVals);
-
-		// Enable the framework-managed virtual desktop lifecycle (one-shot ready +
-		// debounced relayout).
-		prepareForVirtualDesktop();
 
 		// Log environment information early.
 		Log.getInstance().info(Environment.getInstance().toString());
@@ -72,7 +70,7 @@ public class DemoApp3D extends BaseMDIApplication {
 	
 	@Override
 	protected int getVirtualDesktopColumns() {
-		return 4;
+		return 5;
 	} // opts in; 0 = disabled
 
 
@@ -109,6 +107,9 @@ public class DemoApp3D extends BaseMDIApplication {
 		// globe has lazy loading
 		ViewManager.getInstance().addConfiguration(GlobeView3D.getConfiguration());
 		
+		// scatter plot demo
+		scatterPlot3DView = new ScatterPlot3DDemo();
+		
 		aizawaView = AizawaDemoView.createAizawaView();
 	}
 
@@ -124,7 +125,8 @@ public class DemoApp3D extends BaseMDIApplication {
 		VirtualView vv = VirtualView.getInstance(); // framework already owns it
 		vv.moveTo(kineticsView, 0, VirtualView.TOPCENTER);
 		vv.moveTo(aizawaView, 2, VirtualView.CENTER);
-		vv.moveTo(logView, 3, VirtualView.UPPERLEFT);
+		vv.moveTo(scatterPlot3DView, 3, VirtualView.BOTTOMCENTER);
+		vv.moveTo(logView, 4, VirtualView.UPPERLEFT);
 	}
 
 

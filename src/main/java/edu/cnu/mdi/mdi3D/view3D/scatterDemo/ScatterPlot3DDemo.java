@@ -2,6 +2,7 @@ package edu.cnu.mdi.mdi3D.view3D.scatterDemo;
 
 import java.awt.BorderLayout;
 import java.awt.FlowLayout;
+import java.awt.Font;
 import java.util.Properties;
 import java.util.Random;
 import java.util.concurrent.Executors;
@@ -26,6 +27,7 @@ import edu.cnu.mdi.mdi3D.view3D.PlainView3D;
 import edu.cnu.mdi.util.PropertyUtils;
 import edu.cnu.mdi.view.ViewPropertiesBuilder;
 import edu.cnu.mdi.ui.colors.ScientificColorMap;
+import edu.cnu.mdi.ui.fonts.Fonts;
 
 /**
  * Demonstration of {@link ScatterPlot3D}.
@@ -155,47 +157,64 @@ public class ScatterPlot3DDemo extends PlainView3D {
         };
     }
 
+    // Helper to make a button with the given text, font, and action.
+    private JButton makeButton(String text, Font font, Runnable action) {
+		JButton button = new JButton(text);
+		button.setFont(font);
+		button.addActionListener(e -> action.run());
+		return button;
+	}
+    
+    // Helper to make a label with the given text and font.
+    private JLabel makeLabel(String text, Font font) {
+		JLabel label = new JLabel(text);
+		label.setFont(font);
+		return label;
+	}
+    
     // -----------------------------------------------------------------------
     // Control strip
     // -----------------------------------------------------------------------
 
     private JPanel buildControlPanel() {
-        JPanel bar = new JPanel(new FlowLayout(FlowLayout.LEFT, 8, 4));
+        JPanel bar = new JPanel(new FlowLayout(FlowLayout.LEFT, 6, 4));
+        
+        Font font = Fonts.plainFontDelta(-2);
+        
+        JButton surface = makeButton("Surface", font, () -> {
+			stopProducer();
+			loadSurfaceData();
+		});
 
-        JButton surface = new JButton("Surface Demo");
-        surface.addActionListener(e -> {
-            stopProducer();
-            loadSurfaceData();
-        });
+
         bar.add(surface);
 
         // --- Trickle: 1 pt every 200 ms ---
-        JButton trickle = new JButton("Trickle (5/s)");
-        trickle.addActionListener(e -> startProducer(200, 1));
+        JButton trickle = makeButton("Trickle (5/s)", font, () -> startProducer(200, 1));
         bar.add(trickle);
 
         // --- Storm: 100 pts every 20 ms ≈ 5,000/s ---
-        JButton storm = new JButton("Storm (5000/s)");
-        storm.addActionListener(e -> startProducer(20, 100));
+        JButton storm = makeButton("Storm (5k/s)", font, () -> startProducer(20, 100));
         bar.add(storm);
 
-        JButton stop = new JButton("Stop");
-        stop.addActionListener(e -> stopProducer());
+        JButton stop = makeButton("Stop", font, this::stopProducer);
         bar.add(stop);
 
-        JButton clear = new JButton("Clear");
-        clear.addActionListener(e -> {
-            stopProducer();
-            _totalAdded.set(0);
-            if (_scatter != null) {
-                _scatter.clear(-1.5f, 1.5f, -1.5f, 1.5f, -1.5f, 1.5f);
-            }
-            updateStatus();
-        });
+        JButton clear = makeButton("Clear", font, () -> {
+        				stopProducer();
+        				_totalAdded.set(0);
+        				if (_scatter != null) {
+        					_scatter.clear(-1.5f, 1.5f, -
+        							1.5f, 1.5f, -1.5f, 1.5f);
+        				}
+        				updateStatus();
+        				});
         bar.add(clear);
 
-        bar.add(new JLabel("  Map:"));
+
+        bar.add(makeLabel("  Map:", font));
         JComboBox<ScientificColorMap> maps = new JComboBox<>(ScientificColorMap.values());
+        maps.setFont(font);
         maps.setSelectedItem(ScientificColorMap.VIRIDIS);
         maps.addActionListener(e -> {
             if (_scatter != null) {
@@ -204,8 +223,9 @@ public class ScatterPlot3DDemo extends PlainView3D {
         });
         bar.add(maps);
 
-        bar.add(new JLabel("  Style:"));
+        bar.add(makeLabel("  Style:", font));
         JComboBox<RenderStyle> styles = new JComboBox<>(RenderStyle.values());
+        styles.setFont(font);
         styles.setSelectedItem(RenderStyle.AUTO);
         styles.addActionListener(e -> {
             if (_scatter != null) {
@@ -214,7 +234,7 @@ public class ScatterPlot3DDemo extends PlainView3D {
         });
         bar.add(styles);
 
-        bar.add(new JLabel("  Throttle ms:"));
+        bar.add(makeLabel("  Throttle ms:", font));
         JSlider throttle = new JSlider(0, 200, 50);
         throttle.setMajorTickSpacing(50);
         throttle.setPaintTicks(true);
@@ -225,7 +245,7 @@ public class ScatterPlot3DDemo extends PlainView3D {
         });
         bar.add(throttle);
 
-        _statusLabel = new JLabel("  0 points");
+        _statusLabel = makeLabel("  0 points", font);
         bar.add(_statusLabel);
 
         // Tick the status label every 500 ms on the EDT
