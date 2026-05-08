@@ -63,9 +63,6 @@ public class DemoApp3D extends BaseMDIApplication {
 
 		// Log environment information early.
 		Log.getInstance().info(Environment.getInstance().toString());
-
-		// Create internal views. (Do not depend on the outer frame being visible here.)
-		addInitialViews();
 	}
 	
 	@Override
@@ -95,7 +92,7 @@ public class DemoApp3D extends BaseMDIApplication {
 	 * This method only builds views; it should not depend on the outer frame being
 	 * shown or on final geometry.
 	 */
-	private void addInitialViews() {
+	protected void addInitialViews() {
 
 		// Log view is useful but not always visible.
 		logView = new LogView();
@@ -113,20 +110,13 @@ public class DemoApp3D extends BaseMDIApplication {
 		aizawaView = AizawaDemoView.createAizawaView();
 	}
 
-	@Override
-    protected String getApplicationId() {
-        return "mdiDemoApp";
-    }
-
-
 	// put the views in the virtual desktop in a reasonable default layout.
 	@Override
 	protected void defaultViewLayout() {
-		VirtualView vv = VirtualView.getInstance(); // framework already owns it
-		vv.moveTo(kineticsView, 0, VirtualView.TOPCENTER);
-		vv.moveTo(aizawaView, 2, VirtualView.CENTER);
-		vv.moveTo(scatterPlot3DView, 3, VirtualView.BOTTOMCENTER);
-		vv.moveTo(logView, 4, VirtualView.UPPERLEFT);
+		virtualViewMove(kineticsView, 0, VirtualView.TOPCENTER);
+		virtualViewMove(aizawaView, 2, VirtualView.CENTER);
+		virtualViewMove(scatterPlot3DView, 3, VirtualView.BOTTOMCENTER);
+		virtualViewMove(logView, 4, VirtualView.UPPERLEFT);
 	}
 
 
