@@ -95,7 +95,8 @@ public class DemoApp3D extends BaseMDIApplication {
 	 * This method only builds views; it should not depend on the outer frame being
 	 * shown or on final geometry.
 	 */
-	private void addInitialViews() {
+	@Override
+	protected void addInitialViews() {
 
 		// Log view is useful but not always visible.
 		logView = new LogView();
