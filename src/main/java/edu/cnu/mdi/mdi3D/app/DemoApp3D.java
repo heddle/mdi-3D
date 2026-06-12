@@ -4,6 +4,7 @@ package edu.cnu.mdi.mdi3D.app;
 import edu.cnu.mdi.app.BaseMDIApplication;
 import edu.cnu.mdi.log.Log;
 import edu.cnu.mdi.mdi3D.view3D.aizawaDemo.AizawaDemoView;
+import edu.cnu.mdi.mdi3D.view3D.geoslice.GeometrySlice3DView;
 import edu.cnu.mdi.mdi3D.view3D.globe.GlobeView3D;
 import edu.cnu.mdi.mdi3D.view3D.kineticsDemo.KineticsDemoView;
 import edu.cnu.mdi.mdi3D.view3D.scatterDemo.ScatterPlot3DDemo;
@@ -52,6 +53,7 @@ public class DemoApp3D extends BaseMDIApplication {
 	private KineticsDemoView kineticsView;
 	private AizawaDemoView aizawaView;
 	private ScatterPlot3DDemo scatterPlot3DView;
+	private GeometrySlice3DView geometrySlice3DView;
 
 	/**
 	 * Private constructor: use {@link #getInstance()}.
@@ -67,7 +69,7 @@ public class DemoApp3D extends BaseMDIApplication {
 	
 	@Override
 	protected int getVirtualDesktopColumns() {
-		return 5;
+		return 6;
 	} // opts in; 0 = disabled
 
 
@@ -108,7 +110,11 @@ public class DemoApp3D extends BaseMDIApplication {
 		// scatter plot demo
 		scatterPlot3DView = new ScatterPlot3DDemo();
 		
+		// Aizawa attractor demo
 		aizawaView = AizawaDemoView.createAizawaView();
+		
+		// geometry slice demo
+		geometrySlice3DView = GeometrySlice3DView.createGeometrySlice3DView();
 	}
 
 	// put the views in the virtual desktop in a reasonable default layout.
@@ -118,6 +124,7 @@ public class DemoApp3D extends BaseMDIApplication {
 		virtualViewMove(aizawaView, 2, VirtualView.CENTER);
 		virtualViewMove(scatterPlot3DView, 3, VirtualView.BOTTOMCENTER);
 		virtualViewMove(logView, 4, VirtualView.UPPERLEFT);
+		virtualViewMove(geometrySlice3DView, 5, VirtualView.CENTER);
 	}
 
 

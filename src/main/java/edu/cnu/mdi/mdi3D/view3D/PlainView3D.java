@@ -55,7 +55,8 @@ public abstract class PlainView3D extends BaseView implements ActionListener {
 		JMenuBar menuBar = new JMenuBar();
 		setJMenuBar(menuBar);
 		addMenus();
-
+		installViewInfoButton(menuBar);
+		
 		float angleX = PropertyUtils.getFloat(properties, PropertyUtils.ANGLE_X);
 		float angleY = PropertyUtils.getFloat(properties, PropertyUtils.ANGLE_Y);
 		float angleZ = PropertyUtils.getFloat(properties, PropertyUtils.ANGLE_Z);
@@ -71,8 +72,6 @@ public abstract class PlainView3D extends BaseView implements ActionListener {
 
 	}
 	
-
-
 	/**
 	 * Create the 3D panel for this view.
 	 *
@@ -145,6 +144,34 @@ public abstract class PlainView3D extends BaseView implements ActionListener {
 		// for 2D views, so we return null here to indicate that this view does not
 		// support containers.
 	    return null;
+	}
+	
+	/**
+	 * Install the standard MDI view-information button on the 3D view menu bar.
+	 *
+	 * <p>
+	 * Plain 3D views do not use the normal 2D MDI toolbar, so they would otherwise
+	 * have no obvious place for the standard information button. The menu bar is a
+	 * good location because it is already part of the {@code JInternalFrame}
+	 * chrome and does not overlap or intercept mouse events intended for the
+	 * {@link Panel3D}'s {@code GLJPanel}.
+	 * </p>
+	 *
+	 * <p>
+	 * The button is the same {@code ViewInfoButton} used elsewhere in the
+	 * framework. It delegates to {@link BaseView#viewInfo()}, so subclasses only
+	 * need to override {@link #getViewInfo()} in the usual way.
+	 * </p>
+	 *
+	 * @param menuBar the menu bar on which to install the button
+	 */
+	private void installViewInfoButton(JMenuBar menuBar) {
+	    if (menuBar == null) {
+	        return;
+	    }
+
+	    menuBar.add(Box.createHorizontalGlue());
+	    menuBar.add(getInfoButton());
 	}
 
 	/**

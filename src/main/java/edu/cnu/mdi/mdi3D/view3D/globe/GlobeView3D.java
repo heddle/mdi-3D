@@ -154,8 +154,12 @@ public class GlobeView3D extends PlainView3D {
 				addItem(globe);
 
 				try {
+					String resPath = resPrefix + MapResources.COUNTRIES_GEOJSON;
+					//just to be sure remove and double slashes from path
+					resPath = resPath.replaceAll("//", "/");
+					
 					List<CountryFeature> features = GeoJsonCountryLoader
-							.loadFromResourceStatic(resPrefix + MapResources.COUNTRIES_GEOJSON);
+							.loadFromResourceStatic(resPath);
 
 					GlobeCountryLines3D lines = new GlobeCountryLines3D(this, features, radius);
 					lines.setLineColor(new Color(230, 230, 230));
@@ -168,8 +172,11 @@ public class GlobeView3D extends PlainView3D {
 				}
 
 				try {
+					String resPath = resPrefix + MapResources.CITIES_GEOJSON;
+					 //just to be sure remove and double slashes from path
+					resPath = resPath.replaceAll("//", "/");
 					var cities = GeoJsonCityLoader
-							.loadFromResourceStatic(Environment.MDI_RESOURCE_PATH + MapResources.CITIES_GEOJSON);
+							.loadFromResourceStatic(resPath);
 
 					var filtered = cities.stream()
 							.filter(c -> c.getPopulation() >= 2_000_000)

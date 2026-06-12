@@ -26,13 +26,49 @@ import edu.cnu.mdi.mdi3D.adapter3D.KeyBindings3D;
 import edu.cnu.mdi.mdi3D.adapter3D.MouseAdapter3D;
 import edu.cnu.mdi.mdi3D.item3D.Item3D;
 
+/**
+ * Swing component that hosts a JOGL {@link GLJPanel} and manages a simple
+ * interactive 3D scene.
+ *
+ * <p>
+ * {@code Panel3D} is the central drawing panel used by the MDI-3D extension.
+ * It owns the OpenGL panel, the list of {@link Item3D} objects to render, the
+ * current camera translation, the current scale, and the current orientation.
+ * Rotation is stored as a quaternion so mouse-drag arcball rotations compose
+ * smoothly without accumulating Euler-angle artifacts.
+ * </p>
+ *
+ * <p>
+ * Subclasses normally customize a panel by overriding
+ * {@link #createInitialItems()}, {@link #beforeDraw(GLAutoDrawable)}, or
+ * {@link #afterDraw(GLAutoDrawable)}. Optional Swing components can be placed
+ * around the OpenGL canvas by overriding the directional hook methods
+ * {@link #addNorth()}, {@link #addSouth()}, {@link #addEast()}, and
+ * {@link #addWest()}.
+ * </p>
+ *
+ * <p>
+ * Rendering uses two passes. Opaque items are drawn first with depth writes
+ * enabled. Transparent items are then sorted approximately back-to-front and
+ * drawn with blending enabled and depth writes disabled. This is not a full
+ * order-independent transparency solution, but it is appropriate for the simple
+ * educational and diagnostic scenes used by the MDI-3D demos.
+ * </p>
+ *
+ * <p>
+ * The panel supports both unit-scale and large-world scenes. Keyboard panning
+ * and mouse-wheel navigation use a configurable navigation step; the default
+ * preserves the original small-scene behavior, while larger scenes can call
+ * {@link #setNavigationStep(float)} or {@link #setNavigationStepFromExtent(float)}.
+ * </p>
+ */
 @SuppressWarnings("serial")
 public class Panel3D extends JPanel implements GLEventListener {
 
-	// background default color used for r, g and b
+	/** Default background component used for red, green, and blue. */
 	public static final float BG_DEFAULT = 0.9804f;
 
-	// alpha cutoff for opaque vs transparent
+	/** Alpha values below this cutoff are treated as transparent. */
 	private static final int OPAQUE_ALPHA_CUTOFF = 250;
 
 	// the actual components of the background
@@ -48,6 +84,10 @@ public class Panel3D extends JPanel implements GLEventListener {
 	protected GLCapabilities glcapabilities;
 	protected final GLJPanel gljpanel;
 	protected GLU glu; // glu utilities
+	
+	// Navigation step used by keyboard panning and mouse-wheel zoom.
+	// The default preserves the old behavior for unit-scale views.
+	private float _navigationStep = 0.1f;
 
 	// distance in front of the screen
 	private float _zdist;
@@ -79,32 +119,48 @@ public class Panel3D extends JPanel implements GLEventListener {
 	protected String _versionStr;
 
 	/**
-	 * Constructor for the 3D panel.
-	 * 
-	 * @param angleX initial rotation angle around X axis (degrees)
-	 * @param angleY initial rotation angle around Y axis (degrees)
-	 * @param angleZ initial rotation angle around Z axis (degrees)
-	 * @param xDist  initial X distance
-	 * @param yDist  initial Y distance
-	 * @param zDist  initial Z distance
+	 * Construct a 3D panel with the default light-gray background.
+	 *
+	 * <p>
+	 * The initial orientation is established by resetting the quaternion
+	 * orientation and then applying rotations about x, y, and z, in that order.
+	 * The distance parameters are OpenGL model-view translations applied before
+	 * scaling and rotation.
+	 * </p>
+	 *
+	 * @param angleX initial rotation angle about the x axis, in degrees
+	 * @param angleY initial rotation angle about the y axis, in degrees
+	 * @param angleZ initial rotation angle about the z axis, in degrees
+	 * @param xDist initial x translation
+	 * @param yDist initial y translation
+	 * @param zDist initial z translation
 	 */
 	public Panel3D(float angleX, float angleY, float angleZ, float xDist, float yDist, float zDist) {
 		this(angleX, angleY, angleZ, xDist, yDist, zDist, BG_DEFAULT, BG_DEFAULT, BG_DEFAULT, false);
 	}
 
 	/**
-	 * Constructor for the 3D panel.
-	 * 
-	 * @param angleX        initial rotation angle around X axis (degrees)
-	 * @param angleY        initial rotation angle around Y axis (degrees)
-	 * @param angleZ        initial rotation angle around Z axis (degrees)
-	 * @param xDist         initial X distance
-	 * @param yDist         initial Y distance
-	 * @param zDist         initial Z distance
-	 * @param bgRed         red component of background color
-	 * @param bgGreen       green component of background color
-	 * @param bgBlue        blue component of background color
-	 * @param skipLastStage if true, skip the final glLoadIdentity() in display()
+	 * Construct a 3D panel with an explicit background color.
+	 *
+	 * <p>
+	 * The constructor creates the {@link GLJPanel}, registers this object as the
+	 * {@link GLEventListener}, installs the MDI-3D keyboard and mouse adapters,
+	 * and creates any optional border components returned by the directional hook
+	 * methods. The initial scene contents are then created by calling
+	 * {@link #createInitialItems()}.
+	 * </p>
+	 *
+	 * @param angleX initial rotation angle about the x axis, in degrees
+	 * @param angleY initial rotation angle about the y axis, in degrees
+	 * @param angleZ initial rotation angle about the z axis, in degrees
+	 * @param xDist initial x translation
+	 * @param yDist initial y translation
+	 * @param zDist initial z translation
+	 * @param bgRed red component of the background color, in {@code [0, 1]}
+	 * @param bgGreen green component of the background color, in {@code [0, 1]}
+	 * @param bgBlue blue component of the background color, in {@code [0, 1]}
+	 * @param skipLastStage if {@code true}, skip the final
+	 *        {@code glLoadIdentity()} in {@link #display(GLAutoDrawable)}
 	 */
 	public Panel3D(float angleX, float angleY, float angleZ, float xDist, float yDist, float zDist, float bgRed,
 			float bgGreen, float bgBlue, boolean skipLastStage) {
@@ -163,36 +219,114 @@ public class Panel3D extends JPanel implements GLEventListener {
 
 	}
 
+	/**
+	 * Create the initial 3D items for this panel.
+	 *
+	 * <p>
+	 * The default implementation is empty. Subclasses normally override this
+	 * method to populate the panel with axes, lines, surfaces, point clouds, or
+	 * other {@link Item3D} objects. This method is called by the constructor after
+	 * the OpenGL panel and input adapters have been created.
+	 * </p>
+	 */
 	public void createInitialItems() {
 		// default empty implementation
 	}
 
+	/**
+	 * Add an optional border component when it is non-null.
+	 *
+	 * @param c component to add; ignored when {@code null}
+	 * @param placement {@link BorderLayout} placement constraint
+	 */
 	private void safeAdd(JComponent c, String placement) {
 		if (c != null) {
 			add(c, placement);
 		}
 	}
 
-	private JComponent addNorth() {
+	/**
+	 * Optional hook for a Swing component on the north side of the panel.
+	 *
+	 * <p>
+	 * The default implementation returns {@code null}. Subclasses can override
+	 * this method to add controls, legends, sliders, or other Swing components
+	 * outside the OpenGL drawing area.
+	 * </p>
+	 *
+	 * @return component to place on the north side, or {@code null}
+	 */
+	protected JComponent addNorth() {
 		return null;
 	}
 
-	private JComponent addSouth() {
+	/**
+	 * Optional hook for a Swing component on the south side of the panel.
+	 *
+	 * <p>
+	 * The default implementation returns {@code null}. Subclasses can override
+	 * this method to add controls, legends, sliders, or other Swing components
+	 * outside the OpenGL drawing area.
+	 * </p>
+	 *
+	 * @return component to place on the south side, or {@code null}
+	 */
+	protected JComponent addSouth() {
 		return null;
 	}
 
-	private JComponent addEast() {
+	/**
+	 * Optional hook for a Swing component on the east side of the panel.
+	 *
+	 * <p>
+	 * The default implementation returns {@code null}. Subclasses can override
+	 * this method to add controls, legends, sliders, or other Swing components
+	 * outside the OpenGL drawing area.
+	 * </p>
+	 *
+	 * @return component to place on the east side, or {@code null}
+	 */
+	protected JComponent addEast() {
 		return null;
 	}
 
-	private JComponent addWest() {
+	/**
+	 * Optional hook for a Swing component on the west side of the panel.
+	 *
+	 * <p>
+	 * The default implementation returns {@code null}. Subclasses can override
+	 * this method to add controls, legends, sliders, or other Swing components
+	 * outside the OpenGL drawing area.
+	 * </p>
+	 *
+	 * @return component to place on the west side, or {@code null}
+	 */
+	protected JComponent addWest() {
 		return null;
 	}
 
+	/**
+	 * Return the JOGL panel hosted by this Swing panel.
+	 *
+	 * <p>
+	 * Most callers should interact with {@code Panel3D} rather than the raw
+	 * {@code GLJPanel}. This accessor is provided for cases that need direct
+	 * integration with JOGL or Swing.
+	 * </p>
+	 *
+	 * @return the hosted OpenGL panel
+	 */
 	public GLJPanel getGLJPanel() {
 		return gljpanel;
 	}
 
+	/**
+	 * Set the scale factors applied to the scene before rotation.
+	 *
+	 * @param xscale scale factor in x
+	 * @param yscale scale factor in y
+	 * @param zscale scale factor in z
+	 */
 	public void setScale(float xscale, float yscale, float zscale) {
 		_xscale = xscale;
 		_yscale = yscale;
@@ -200,8 +334,17 @@ public class Panel3D extends JPanel implements GLEventListener {
 	}
 
 	/**
-	 * TRUE axis-angle rotation composition (restores arcball behavior). The angle
-	 * is in radians (as produced by MouseAdapter3D).
+	 * Apply an axis-angle rotation to the current orientation.
+	 *
+	 * <p>
+	 * This method composes the new rotation with the existing quaternion
+	 * orientation. The rotation angle is in radians, which matches the values
+	 * produced by {@link MouseAdapter3D}. Invalid or nearly zero-length axes are
+	 * ignored.
+	 * </p>
+	 *
+	 * @param axis rotation axis
+	 * @param angleRadians rotation angle, in radians
 	 */
 	public void rotate(Vector3f axis, float angleRadians) {
 		if (axis == null) {
@@ -229,6 +372,11 @@ public class Panel3D extends JPanel implements GLEventListener {
 		refresh();
 	}
 
+	/**
+	 * Rotate the scene about the x axis.
+	 *
+	 * @param angleDeg rotation angle, in degrees
+	 */
 	public void rotateX(float angleDeg) {
 		float rad = (float) Math.toRadians(angleDeg);
 		Quat dq = Quat.fromAxisAngle(1f, 0f, 0f, rad);
@@ -241,6 +389,11 @@ public class Panel3D extends JPanel implements GLEventListener {
 		refresh();
 	}
 
+	/**
+	 * Rotate the scene about the y axis.
+	 *
+	 * @param angleDeg rotation angle, in degrees
+	 */
 	public void rotateY(float angleDeg) {
 		float rad = (float) Math.toRadians(angleDeg);
 		Quat dq = Quat.fromAxisAngle(0f, 1f, 0f, rad);
@@ -253,6 +406,11 @@ public class Panel3D extends JPanel implements GLEventListener {
 		refresh();
 	}
 
+	/**
+	 * Rotate the scene about the z axis.
+	 *
+	 * @param angleDeg rotation angle, in degrees
+	 */
 	public void rotateZ(float angleDeg) {
 		float rad = (float) Math.toRadians(angleDeg);
 		Quat dq = Quat.fromAxisAngle(0f, 0f, 1f, rad);
@@ -266,8 +424,13 @@ public class Panel3D extends JPanel implements GLEventListener {
 	}
 
 	/**
-	 * Historically this reset the internal rotation matrix to identity. Now it
-	 * resets the quaternion orientation to identity (and zeroes the angle fields).
+	 * Reset the current orientation to the identity rotation.
+	 *
+	 * <p>
+	 * Earlier versions of MDI-3D stored the orientation as a matrix. The current
+	 * implementation stores the orientation as a quaternion; this method preserves
+	 * the old name while resetting the quaternion to identity.
+	 * </p>
 	 */
 	public void loadIdentityMatrix() {
 		synchronized (_orientation) {
@@ -275,6 +438,18 @@ public class Panel3D extends JPanel implements GLEventListener {
 		}
 	}
 
+	/**
+	 * Render the current OpenGL frame.
+	 *
+	 * <p>
+	 * JOGL calls this method whenever the {@link GLJPanel} needs to draw. The
+	 * method clears the buffers, applies translation, scale, and quaternion
+	 * orientation, snapshots the current item list, draws opaque items first, and
+	 * then draws transparent items in approximate back-to-front order.
+	 * </p>
+	 *
+	 * @param drawable JOGL drawable being rendered
+	 */
 	@Override
 	public void display(GLAutoDrawable drawable) {
 
@@ -352,12 +527,45 @@ public class Panel3D extends JPanel implements GLEventListener {
 		gl.glLoadIdentity();
 	}
 
+	/**
+	 * Hook called after the model-view transform has been applied and before any
+	 * items are drawn.
+	 *
+	 * <p>
+	 * The default implementation is empty. Subclasses can override this method to
+	 * draw custom OpenGL content behind the item list.
+	 * </p>
+	 *
+	 * @param drawable JOGL drawable being rendered
+	 */
 	public void beforeDraw(GLAutoDrawable drawable) {
 	}
 
+	/**
+	 * Hook called after all items have been drawn and before the model-view matrix
+	 * is restored.
+	 *
+	 * <p>
+	 * The default implementation is empty. Subclasses can override this method to
+	 * draw custom OpenGL content on top of the item list.
+	 * </p>
+	 *
+	 * @param drawable JOGL drawable being rendered
+	 */
 	public void afterDraw(GLAutoDrawable drawable) {
 	}
 
+	/**
+	 * Initialize the OpenGL state for this panel.
+	 *
+	 * <p>
+	 * JOGL calls this method when the GL context is created. The method records
+	 * renderer/version strings and configures depth testing, perspective
+	 * correction, blending, point sizing, and the clear color.
+	 * </p>
+	 *
+	 * @param drawable JOGL drawable whose context is being initialized
+	 */
 	@Override
 	public void init(GLAutoDrawable drawable) {
 		glu = new GLU();
@@ -387,6 +595,20 @@ public class Panel3D extends JPanel implements GLEventListener {
 		gl.glEnable(GL3.GL_PROGRAM_POINT_SIZE);
 	}
 
+	/**
+	 * Update the OpenGL viewport and projection matrix after a resize.
+	 *
+	 * <p>
+	 * The projection uses a 45-degree perspective field of view with a broad
+	 * near/far range appropriate for the simple demo scenes used by MDI-3D.
+	 * </p>
+	 *
+	 * @param drawable JOGL drawable being reshaped
+	 * @param x viewport x origin
+	 * @param y viewport y origin
+	 * @param width new viewport width
+	 * @param height new viewport height
+	 */
 	@Override
 	public void reshape(GLAutoDrawable drawable, int x, int y, int width, int height) {
 		// glu may be null if reshape fires before init completes (can happen
@@ -416,18 +638,42 @@ public class Panel3D extends JPanel implements GLEventListener {
 		gl.glLoadIdentity();
 	}
 
+	/**
+	 * Increment the current x translation.
+	 *
+	 * @param dx change in x translation
+	 */
 	public void deltaX(float dx) {
 		_xdist += dx;
 	}
 
+	/**
+	 * Increment the current y translation.
+	 *
+	 * @param dy change in y translation
+	 */
 	public void deltaY(float dy) {
 		_ydist += dy;
 	}
 
+	/**
+	 * Increment the current z translation.
+	 *
+	 * @param dz change in z translation
+	 */
 	public void deltaZ(float dz) {
 		_zdist += dz;
 	}
 
+	/**
+	 * Placeholder for queued refresh support.
+	 *
+	 * <p>
+	 * The current implementation is intentionally empty. It is retained for API
+	 * compatibility with code that may distinguish queued refreshes from immediate
+	 * or soft refreshes.
+	 * </p>
+	 */
 	public void refreshQueued() {
 	}
 
@@ -466,7 +712,14 @@ public class Panel3D extends JPanel implements GLEventListener {
 	}
 
 	/**
-	 * Adds the given item to the panel.
+	 * Add an item to the panel.
+	 *
+	 * <p>
+	 * If the item is already present, it is moved to the end of the list. Later
+	 * items are normally drawn later within their opaque/transparent pass.
+	 * </p>
+	 *
+	 * @param item item to add; ignored when {@code null}
 	 */
 	public void addItem(Item3D item) {
 		if (item != null) {
@@ -476,7 +729,14 @@ public class Panel3D extends JPanel implements GLEventListener {
 	}
 
 	/**
-	 * Adds the given item at the specified index in the panel.
+	 * Add an item at the specified list index.
+	 *
+	 * <p>
+	 * If the item is already present, the existing occurrence is removed first.
+	 * </p>
+	 *
+	 * @param index insertion index
+	 * @param item item to add; ignored when {@code null}
 	 */
 	public void addItem(int index, Item3D item) {
 		if (item != null) {
@@ -486,7 +746,9 @@ public class Panel3D extends JPanel implements GLEventListener {
 	}
 
 	/**
-	 * Removes the given item from the panel.
+	 * Remove an item from the panel and refresh the display.
+	 *
+	 * @param item item to remove; ignored when {@code null}
 	 */
 	public void removeItem(Item3D item) {
 		if (item != null) {
@@ -496,7 +758,7 @@ public class Panel3D extends JPanel implements GLEventListener {
 	}
 
 	/**
-	 * Removes all items from the panel.
+	 * Remove all items from the panel and refresh the display.
 	 */
 	public void clearItems() {
 		_itemList.clear();
@@ -531,9 +793,20 @@ public class Panel3D extends JPanel implements GLEventListener {
 	}
 
 	/**
-	 * Projects the given object coordinates (objX, objY, objZ) to window
-	 * coordinates. The result is stored in winPos[0] (x), winPos[1] (y), winPos[2]
-	 * (z).
+	 * Project object coordinates to window coordinates using the current OpenGL
+	 * matrices.
+	 *
+	 * <p>
+	 * The result is written into {@code winPos}: {@code winPos[0]} is window x,
+	 * {@code winPos[1]} is window y, and {@code winPos[2]} is window z/depth.
+	 * The caller must provide an array with length at least three.
+	 * </p>
+	 *
+	 * @param gl active GL2 context
+	 * @param objX object x coordinate
+	 * @param objY object y coordinate
+	 * @param objZ object z coordinate
+	 * @param winPos output array for window coordinates
 	 */
 	public void project(GL2 gl, float objX, float objY, float objZ, float winPos[]) {
 		int[] view = new int[4];
@@ -548,10 +821,61 @@ public class Panel3D extends JPanel implements GLEventListener {
 		glu.gluProject(objX, objY, objZ, model, 0, proj, 0, view, 0, winPos, 0);
 	}
 
-	public float getZStep() {
-		return 0.1f;
+	/**
+	 * Set the navigation step used by keyboard panning and mouse-wheel zoom.
+	 *
+	 * <p>
+	 * The original default value is suitable for small unit-scale scenes. Larger
+	 * scenes should set this to a value proportional to the scene extent, for
+	 * example {@code extent / 50}.
+	 * </p>
+	 *
+	 * @param navigationStep positive navigation step in world units
+	 */
+	public void setNavigationStep(float navigationStep) {
+	    if (Float.isFinite(navigationStep) && navigationStep > 0f) {
+	        _navigationStep = navigationStep;
+	    }
 	}
 
+	/**
+	 * Set the navigation step from a characteristic scene extent.
+	 *
+	 * <p>
+	 * This is a convenience method for views whose world coordinates are much
+	 * larger than order unity. A scene spanning roughly 700 world units, for
+	 * example, gets a step of about 14 units.
+	 * </p>
+	 *
+	 * @param extent characteristic scene extent in world units
+	 */
+	public void setNavigationStepFromExtent(float extent) {
+	    if (Float.isFinite(extent) && extent > 0f) {
+	        setNavigationStep(extent / 50f);
+	    }
+	}
+
+	/**
+	 * Return the navigation step used by keyboard panning and mouse-wheel zoom.
+	 *
+	 * @return navigation step in world units
+	 */
+	public float getZStep() {
+	    return _navigationStep;
+	}
+	/**
+	 * Determine whether an item should be drawn in the transparent pass.
+	 *
+	 * <p>
+	 * An item is treated as transparent when either its fill alpha or line alpha
+	 * is non-negative and below {@link #OPAQUE_ALPHA_CUTOFF}. Exceptions from
+	 * item alpha accessors are ignored so that legacy item implementations remain
+	 * renderable.
+	 * </p>
+	 *
+	 * @param item item to test
+	 * @return {@code true} if the item should be drawn in the transparent pass
+	 */
 	private boolean isTransparent(Item3D item) {
 		try {
 			int fa = item.getFillAlpha();
@@ -575,15 +899,34 @@ public class Panel3D extends JPanel implements GLEventListener {
 	// --------------------------------------------------------------------
 	// Minimal quaternion implementation (no dependencies)
 	// --------------------------------------------------------------------
+
+	/**
+	 * Minimal quaternion implementation used for scene orientation.
+	 *
+	 * <p>
+	 * This nested class is deliberately small and dependency-free. It supports
+	 * identity reset, copying, axis-angle construction, multiplication,
+	 * normalization, and conversion to the OpenGL column-major matrix format used
+	 * by {@code glMultMatrixf}.
+	 * </p>
+	 */
 	private static final class Quat {
 		// w + xi + yj + zk
 		float w = 1f, x = 0f, y = 0f, z = 0f;
 
+		/**
+		 * Reset this quaternion to the identity rotation.
+		 */
 		void setIdentity() {
 			w = 1f;
 			x = y = z = 0f;
 		}
 
+		/**
+		 * Copy another quaternion into this one.
+		 *
+		 * @param q source quaternion
+		 */
 		void set(Quat q) {
 			this.w = q.w;
 			this.x = q.x;
@@ -591,6 +934,15 @@ public class Panel3D extends JPanel implements GLEventListener {
 			this.z = q.z;
 		}
 
+		/**
+		 * Create a quaternion from a normalized axis and angle.
+		 *
+		 * @param ax x component of rotation axis
+		 * @param ay y component of rotation axis
+		 * @param az z component of rotation axis
+		 * @param angleRad rotation angle, in radians
+		 * @return new quaternion representing the rotation
+		 */
 		static Quat fromAxisAngle(float ax, float ay, float az, float angleRad) {
 			float half = 0.5f * angleRad;
 			float s = (float) Math.sin(half);
@@ -602,6 +954,12 @@ public class Panel3D extends JPanel implements GLEventListener {
 			return q;
 		}
 
+		/**
+		 * Multiply this quaternion by another quaternion.
+		 *
+		 * @param r right-hand quaternion
+		 * @return product {@code this * r}
+		 */
 		Quat mul(Quat r) {
 			// this * r
 			Quat q = new Quat();
@@ -612,7 +970,14 @@ public class Panel3D extends JPanel implements GLEventListener {
 			return q;
 		}
 
-		// Normalize quaternion in place
+		/**
+		 * Normalize this quaternion in place.
+		 *
+		 * <p>
+		 * If the norm is too small to normalize safely, the quaternion is reset to
+		 * identity.
+		 * </p>
+		 */
 		void normalizeInPlace() {
 			float n = (float) Math.sqrt(w * w + x * x + y * y + z * z);
 			if (n < 1e-12f) {
@@ -626,7 +991,9 @@ public class Panel3D extends JPanel implements GLEventListener {
 		}
 
 		/**
-		 * Convert to a 4x4 column-major matrix for OpenGL.
+		 * Convert this quaternion to a 4x4 column-major rotation matrix for OpenGL.
+		 *
+		 * @param m output array with length at least 16
 		 */
 		void toColumnMajorMatrix(float[] m) {
 			// assumes normalized
@@ -657,6 +1024,17 @@ public class Panel3D extends JPanel implements GLEventListener {
 		}
 	}
 
+	/**
+	 * Sort transparent items in approximate back-to-front order.
+	 *
+	 * <p>
+	 * The sort uses each item's sort point transformed into approximate view
+	 * space. This improves ordinary alpha blending for simple scenes, but does
+	 * not solve all transparency-ordering cases.
+	 * </p>
+	 *
+	 * @param transparent transparent items to sort in place
+	 */
 	private void sortTransparentBackToFront(java.util.List<Item3D> transparent) {
 
 		// Copy rotation matrix once (already computed for glMultMatrixf)
@@ -683,8 +1061,23 @@ public class Panel3D extends JPanel implements GLEventListener {
 	}
 
 	/**
-	 * Compute approximate view-space Z for an item using its sort point. We build a
-	 * view transform equivalent to: v = R * (S * p) + T and return v.z.
+	 * Compute an approximate view-space z value for an item.
+	 *
+	 * <p>
+	 * The computation uses the item's sort point and a simplified view transform:
+	 * {@code v = R * (S * p) + T}. The result is suitable for sorting transparent
+	 * items but is not intended as a general picking or projection calculation.
+	 * </p>
+	 *
+	 * @param item item whose sort point is used
+	 * @param R column-major rotation matrix
+	 * @param sx x scale
+	 * @param sy y scale
+	 * @param sz z scale
+	 * @param tx x translation
+	 * @param ty y translation
+	 * @param tz z translation
+	 * @return approximate view-space z value
 	 */
 	private float viewZ(Item3D item, float[] R, float sx, float sy, float sz, float tx, float ty, float tz) {
 		float[] p = item.getSortPoint();
@@ -703,6 +1096,16 @@ public class Panel3D extends JPanel implements GLEventListener {
 		return zr;
 	}
 	
+	/**
+	 * Dispose of OpenGL resources associated with this listener.
+	 *
+	 * <p>
+	 * The current implementation does not allocate explicit GL resources that
+	 * require manual release, so this method is intentionally empty.
+	 * </p>
+	 *
+	 * @param drawable JOGL drawable being disposed
+	 */
 	@Override
 	public void dispose(GLAutoDrawable drawable) {
 	    // no resources to release
