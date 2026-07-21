@@ -1,10 +1,10 @@
 package edu.cnu.mdi.mdi3D.view3D;
 
-
 import java.awt.BorderLayout;
 import java.awt.Component;
 import java.awt.Container;
 import java.util.Objects;
+import java.util.Properties;
 import java.util.function.Consumer;
 import java.util.function.Supplier;
 
@@ -20,6 +20,7 @@ import edu.cnu.mdi.sim.SimulationEngine;
 import edu.cnu.mdi.sim.SimulationEngineConfig;
 import edu.cnu.mdi.sim.SimulationListener;
 import edu.cnu.mdi.sim.SimulationState;
+import edu.cnu.mdi.util.PropertyUtils;
 
 /**
  * Base class for an MDI 3D view that hosts a {@link SimulationEngine}.
@@ -40,6 +41,13 @@ import edu.cnu.mdi.sim.SimulationState;
  * <li>An optional diagnostics/settings component on the right by wrapping the current
  * CENTER component in a {@link JSplitPane}</li>
  * </ul>
+ *
+ * <h2>Construction</h2>
+ * <p>
+ * This class now supports both the legacy {@code Object... keyVals} pattern and
+ * the cleaner {@link Properties}-based pattern. Legacy constructors are retained
+ * as compatibility shims.
+ * </p>
  *
  * <h2>Threading</h2>
  * <p>
@@ -106,8 +114,19 @@ public abstract class SimulationView3D extends PlainView3D implements ISimulatio
 	 * @param keyVals    standard {@link edu.cnu.mdi.view.BaseView} key-value arguments
 	 */
 	public SimulationView3D(Simulation simulation, Object... keyVals) {
+		this(simulation, PropertyUtils.fromKeyValues(keyVals));
+	}
+
+	/**
+	 * Construct a simulation 3D view using default engine configuration and
+	 * including the default control panel.
+	 *
+	 * @param simulation the simulation to run (non-null)
+	 * @param props      view properties
+	 */
+	public SimulationView3D(Simulation simulation, Properties props) {
 		this(simulation, SimulationEngineConfig.defaults(), true, edu.cnu.mdi.sim.ui.SimulationControlPanel::new,
-				false, null, DEFAULT_DIAG_SPLIT_FRACTION, keyVals);
+				false, null, DEFAULT_DIAG_SPLIT_FRACTION, props);
 	}
 
 	/**
@@ -122,9 +141,24 @@ public abstract class SimulationView3D extends PlainView3D implements ISimulatio
 	 */
 	public SimulationView3D(Simulation simulation, SimulationEngineConfig config, boolean includeControlPanel,
 			Object... keyVals) {
-
 		this(simulation, config, includeControlPanel, edu.cnu.mdi.sim.ui.SimulationControlPanel::new, false, null,
-				DEFAULT_DIAG_SPLIT_FRACTION, keyVals);
+				DEFAULT_DIAG_SPLIT_FRACTION, PropertyUtils.fromKeyValues(keyVals));
+	}
+
+	/**
+	 * Construct a simulation 3D view with optional inclusion of the default control
+	 * panel.
+	 *
+	 * @param simulation          the simulation to run (non-null)
+	 * @param config              engine configuration (non-null)
+	 * @param includeControlPanel if true, creates and adds the default control
+	 *                            panel at SOUTH
+	 * @param props               view properties
+	 */
+	public SimulationView3D(Simulation simulation, SimulationEngineConfig config, boolean includeControlPanel,
+			Properties props) {
+		this(simulation, config, includeControlPanel, edu.cnu.mdi.sim.ui.SimulationControlPanel::new, false, null,
+				DEFAULT_DIAG_SPLIT_FRACTION, props);
 	}
 
 	/**
@@ -138,8 +172,22 @@ public abstract class SimulationView3D extends PlainView3D implements ISimulatio
 	 */
 	public SimulationView3D(Simulation simulation, SimulationEngineConfig config, boolean includeControlPanel,
 			ControlPanelFactory factory, Object... keyVals) {
+		this(simulation, config, includeControlPanel, factory, false, null, DEFAULT_DIAG_SPLIT_FRACTION,
+				PropertyUtils.fromKeyValues(keyVals));
+	}
 
-		this(simulation, config, includeControlPanel, factory, false, null, DEFAULT_DIAG_SPLIT_FRACTION, keyVals);
+	/**
+	 * Construct a simulation 3D view with a caller-provided control panel factory.
+	 *
+	 * @param simulation          the simulation to run (non-null)
+	 * @param config              engine configuration (non-null)
+	 * @param includeControlPanel if true, creates and adds a control panel at SOUTH
+	 * @param factory             factory used to create the control panel component
+	 * @param props               view properties
+	 */
+	public SimulationView3D(Simulation simulation, SimulationEngineConfig config, boolean includeControlPanel,
+			ControlPanelFactory factory, Properties props) {
+		this(simulation, config, includeControlPanel, factory, false, null, DEFAULT_DIAG_SPLIT_FRACTION, props);
 	}
 
 	/**
@@ -167,18 +215,44 @@ public abstract class SimulationView3D extends PlainView3D implements ISimulatio
 			DiagnosticFactory diagnosticFactory,
 			double initialSplitFraction,
 			Object... keyVals) {
+		this(simulation, config, includeControlPanel, controlPanelFactory, includeDiagnostics, diagnosticFactory,
+				initialSplitFraction, PropertyUtils.fromKeyValues(keyVals));
+	}
 
-		super(keyVals);
+	/**
+	 * Construct a simulation 3D view with optional control panel and optional
+	 * diagnostics panel.
+	 *
+	 * @param simulation           the simulation to run (non-null)
+	 * @param config               engine configuration (non-null)
+	 * @param includeControlPanel  if true, creates and adds a control panel at SOUTH
+	 * @param controlPanelFactory  factory used to create the control panel component
+	 *                             (may be null if includeControlPanel is false)
+	 * @param includeDiagnostics   if true, installs a right-side diagnostics component
+	 *                             via a split pane
+	 * @param diagnosticFactory    factory used to create the diagnostics component
+	 *                             (required if includeDiagnostics is true)
+	 * @param initialSplitFraction fraction of width given to the main (left) component
+	 *                             on startup (0..1)
+	 * @param props                view properties
+	 */
+	public SimulationView3D(Simulation simulation,
+			SimulationEngineConfig config,
+			boolean includeControlPanel,
+			ControlPanelFactory controlPanelFactory,
+			boolean includeDiagnostics,
+			DiagnosticFactory diagnosticFactory,
+			double initialSplitFraction,
+			Properties props) {
+
+		super(props);
 
 		Objects.requireNonNull(simulation, "simulation");
 		Objects.requireNonNull(config, "config");
 
-		// The engine gets created first since the control panel factory
-		// may want to bind to it during creation.
 		engine = new SimulationEngine(simulation, config);
 		engine.addListener(this);
 
-		// --- Control panel (SOUTH) ---
 		if (includeControlPanel) {
 			ControlPanelFactory f = (controlPanelFactory != null)
 					? controlPanelFactory
@@ -196,7 +270,6 @@ public abstract class SimulationView3D extends PlainView3D implements ISimulatio
 			controlPanel = null;
 		}
 
-		// --- Diagnostics (right-side split) ---
 		if (includeDiagnostics) {
 			Objects.requireNonNull(diagnosticFactory, "diagnosticFactory");
 			double frac = clamp01(initialSplitFraction);
@@ -210,8 +283,8 @@ public abstract class SimulationView3D extends PlainView3D implements ISimulatio
 			diagnosticsSplitPane = null;
 		}
 
-		//thiis is preferred to pack() because it allows the view to be resized
-		//by the user and still have the split pane divider in a reasonable place.
+		// This is preferred to pack() because it allows the view to be resized
+		// by the user and still have the split pane divider in a reasonable place.
 		doLayout();
 		validate();
 	}
@@ -262,6 +335,7 @@ public abstract class SimulationView3D extends PlainView3D implements ISimulatio
 
 	/**
 	 * Get the diagnostics/settings component if installed.
+	 *
 	 * @return diagnostics/settings component, or null if not installed
 	 */
 	protected JComponent getDiagnosticsComponent() {
@@ -307,7 +381,6 @@ public abstract class SimulationView3D extends PlainView3D implements ISimulatio
 		onSimulationRefresh(ctx);
 
 		try {
-			// PlainView3D.refresh() forwards to the 3D panel.
 			refresh();
 		} catch (Throwable t) {
 			repaint();
@@ -338,14 +411,20 @@ public abstract class SimulationView3D extends PlainView3D implements ISimulatio
 
 		SimulationEngine old = this.engine;
 		if (old != null) {
-			try { old.removeListener(this); } catch (Throwable ignored) {}
+			try {
+				old.removeListener(this);
+			} catch (Throwable ignored) {
+			}
 		}
 
 		this.engine = newEngine;
 		this.engine.addListener(this);
 
 		if (controlPanel instanceof edu.cnu.mdi.sim.ui.ISimulationControlPanel scp) {
-			try { scp.unbind(); } catch (Throwable ignored) {}
+			try {
+				scp.unbind();
+			} catch (Throwable ignored) {
+			}
 			scp.bind(this);
 		}
 	}

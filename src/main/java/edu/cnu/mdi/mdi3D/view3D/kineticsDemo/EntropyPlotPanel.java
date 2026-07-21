@@ -39,8 +39,6 @@ public class EntropyPlotPanel extends AReadyPlotPanel {
 
 	@Override
 	public void plotChanged(PlotChangeType event) {
-		// TODO Auto-generated method stub
-
 	}
 
 	@Override

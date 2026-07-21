@@ -1,15 +1,15 @@
 package edu.cnu.mdi.mdi3D.app;
 
 
-import java.awt.EventQueue;
-
 import edu.cnu.mdi.app.BaseMDIApplication;
-import edu.cnu.mdi.desktop.Desktop;
 import edu.cnu.mdi.log.Log;
+import edu.cnu.mdi.mdi3D.view3D.aizawaDemo.AizawaDemoView;
+import edu.cnu.mdi.mdi3D.view3D.geoslice.GeometrySlice3DView;
 import edu.cnu.mdi.mdi3D.view3D.globe.GlobeView3D;
 import edu.cnu.mdi.mdi3D.view3D.kineticsDemo.KineticsDemoView;
-import edu.cnu.mdi.properties.PropertyUtils;
+import edu.cnu.mdi.mdi3D.view3D.scatterDemo.ScatterPlot3DDemo;
 import edu.cnu.mdi.util.Environment;
+import edu.cnu.mdi.util.PropertyUtils;
 import edu.cnu.mdi.view.LogView;
 import edu.cnu.mdi.view.ViewManager;
 import edu.cnu.mdi.view.VirtualView;
@@ -43,18 +43,6 @@ public class DemoApp3D extends BaseMDIApplication {
 	/** Singleton instance of the demo app. */
 	private static DemoApp3D INSTANCE;
 
-	// -------------------------------------------------------------------------
-	// Optional virtual desktop support
-	// -------------------------------------------------------------------------
-
-	/** Virtual desktop view (optional). */
-	private VirtualView virtualView;
-
-	/** If true, install the VirtualView and place views into columns. */
-	private final boolean enableVirtualDesktop = true;
-
-	/** Number of "columns"/cells in the virtual desktop. */
-	private final int virtualDesktopCols = 3;
 
 	// -------------------------------------------------------------------------
 	// Sample views used by the demo. None are meant to be completely realistic.
@@ -63,7 +51,9 @@ public class DemoApp3D extends BaseMDIApplication {
 
 	private LogView logView;
 	private KineticsDemoView kineticsView;
-	private GlobeView3D globeView;
+	private AizawaDemoView aizawaView;
+	private ScatterPlot3DDemo scatterPlot3DView;
+	private GeometrySlice3DView geometrySlice3DView;
 
 	/**
 	 * Private constructor: use {@link #getInstance()}.
@@ -75,17 +65,13 @@ public class DemoApp3D extends BaseMDIApplication {
 
 		// Log environment information early.
 		Log.getInstance().info(Environment.getInstance().toString());
-
-		// Create internal views. (Do not depend on the outer frame being visible here.)
-		addInitialViews();
-
-		// Optionally create the virtual desktop overview.
-		// Note: VirtualView now resolves its parent frame lazily in addNotify().
-		if (enableVirtualDesktop) {
-			virtualView = VirtualView.createVirtualView(virtualDesktopCols);
-			virtualView.toFront();
-		}
 	}
+	
+	@Override
+	protected int getVirtualDesktopColumns() {
+		return 6;
+	} // opts in; 0 = disabled
+
 
 	/**
 	 * Public access to the singleton.
@@ -108,7 +94,8 @@ public class DemoApp3D extends BaseMDIApplication {
 	 * This method only builds views; it should not depend on the outer frame being
 	 * shown or on final geometry.
 	 */
-	private void addInitialViews() {
+	@Override
+	protected void addInitialViews() {
 
 		// Log view is useful but not always visible.
 		logView = new LogView();
@@ -116,76 +103,30 @@ public class DemoApp3D extends BaseMDIApplication {
 		ViewManager.getInstance().getViewMenu().addSeparator();
 
 		kineticsView = KineticsDemoView.createKineticsView();
-		globeView = GlobeView3D.createGlobeView();
+		
+		// globe has lazy loading
+		ViewManager.getInstance().addConfiguration(GlobeView3D.getConfiguration());
+		
+		// scatter plot demo
+		scatterPlot3DView = new ScatterPlot3DDemo();
+		
+		// Aizawa attractor demo
+		aizawaView = AizawaDemoView.createAizawaView();
+		
+		// geometry slice demo
+		geometrySlice3DView = GeometrySlice3DView.createGeometrySlice3DView();
 	}
 
+	// put the views in the virtual desktop in a reasonable default layout.
 	@Override
-    protected String getApplicationId() {
-        return "mdiDemoApp";
-    }
-
-	/**
-	 * Runs once after the outer frame is showing and Swing layout has stabilized.
-	 * <p>
-	 * This is the correct place to:
-	 * <ul>
-	 * <li>reconfigure the {@link VirtualView} based on the real frame size</li>
-	 * <li>apply the demo's default view placement</li>
-	 * <li>then load/apply any persisted layout (which may override defaults)</li>
-	 * </ul>
-	 */
-	@Override
-	protected void onVirtualDesktopReady() {
-
-		// If virtual desktop is enabled, apply the demo defaults first.
-		if (virtualView != null) {
-			virtualView.reconfigure();
-			restoreDefaultViewLocations();
-		}
-
-		// Apply persisted configuration last, so saved layouts override demo defaults.
-		Desktop.getInstance().loadConfigurationFile();
-		Desktop.getInstance().configureViews();
-
-		Log.getInstance().info("Application name = " + Environment.getApplicationName());
-		Log.getInstance().info("Config file = " + Environment.getInstance().getConfigurationFile());
-
-		Log.getInstance().info(Environment.startupReport());
-		Log.getInstance().info("DemoApp3D is ready.");
+	protected void defaultViewLayout() {
+		virtualViewMove(kineticsView, 0, VirtualView.TOPCENTER);
+		virtualViewMove(aizawaView, 2, VirtualView.CENTER);
+		virtualViewMove(scatterPlot3DView, 3, VirtualView.BOTTOMCENTER);
+		virtualViewMove(logView, 4, VirtualView.UPPERLEFT);
+		virtualViewMove(geometrySlice3DView, 5, VirtualView.CENTER);
 	}
 
-	/**
-	 * Runs after the outer frame is resized or moved (debounced).
-	 * <p>
-	 * Keep this lightweight. Reconfiguring the virtual desktop updates its world
-	 * sizing and refreshes the thumbnail items.
-	 */
-	@Override
-	protected void onVirtualDesktopRelayout() {
-		if (virtualView != null) {
-			virtualView.reconfigure();
-		}
-	}
-
-	/**
-	 * Places the demo views into a reasonable "default" arrangement on the virtual
-	 * desktop.
-	 * <p>
-	 * If a user has a saved configuration, {@link Desktop#configureViews()} will
-	 * typically override these positions.
-	 */
-	private void restoreDefaultViewLocations() {
-
-		// Column 0: kinetics demo centered
-		virtualView.moveTo(kineticsView, 0, VirtualView.CENTER);
-
-		// Column 1: globe view centered
-		virtualView.moveTo(globeView, 1, VirtualView.CENTER);
-
-		// column 2: log view upper left (is not vis by default)
-		virtualView.moveTo(logView, 2, VirtualView.UPPERLEFT);
-
-	}
 
 
 	/**
@@ -194,10 +135,6 @@ public class DemoApp3D extends BaseMDIApplication {
 	 * @param args ignored
 	 */
 	public static void main(String[] args) {
-		EventQueue.invokeLater(() -> {
-			DemoApp3D frame = DemoApp3D.getInstance();
-			frame.restoreDefaultViewLocations();
-			frame.setVisible(true);
-		});
+		BaseMDIApplication.launch(DemoApp3D::getInstance); // launch() already exists in base
 	}
 }

@@ -27,7 +27,6 @@ public class Panel3DDemo extends JFrame {
 		WindowAdapter windowAdapter = new WindowAdapter() {
 			@Override
 			public void windowClosing(WindowEvent event) {
-				System.err.println("Done");
 				System.exit(1);
 			}
 		};
