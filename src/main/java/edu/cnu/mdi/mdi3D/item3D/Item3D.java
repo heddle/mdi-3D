@@ -39,7 +39,10 @@ public abstract class Item3D {
 
 	// controls whether the item is visible
 	// only in the sense do we "want" to draw it
-	private boolean _visible = true;
+	// volatile: setVisible()/isVisible() have no other synchronization, so a
+	// caller on a non-EDT thread still publishes the change safely to the
+	// EDT-based renderer.
+	private volatile boolean _visible = true;
 
 	// this item's child items
 	private Vector<Item3D> _children;
@@ -101,12 +104,25 @@ public abstract class Item3D {
 	public final void drawItem(GLAutoDrawable drawable) {
 		draw(drawable);
 
-		if (_children != null) {
-			for (Item3D item : _children) {
-				if (item.isVisible()) {
-					item.drawItem(drawable);
-				}
+		for (Item3D item : childrenSnapshot()) {
+			if (item.isVisible()) {
+				item.drawItem(drawable);
 			}
+		}
+	}
+
+	/**
+	 * Snapshot the current children under {@code synchronized(this)} — the same
+	 * monitor {@link #addChild(Item3D)} and {@link #removeChild(Item3D)} use —
+	 * so a concurrent structural change (e.g. a child added from a non-EDT
+	 * thread) can never be observed mid-iteration here.
+	 *
+	 * @return an immutable snapshot list; empty (never {@code null}) if there
+	 *         are no children
+	 */
+	private List<Item3D> childrenSnapshot() {
+		synchronized (this) {
+			return (_children == null) ? List.of() : List.copyOf(_children);
 		}
 	}
 
@@ -116,6 +132,41 @@ public abstract class Item3D {
 	 * @param drawable the OpenGL drawable
 	 */
 	public abstract void draw(GLAutoDrawable drawable);
+
+	/**
+	 * Called by the panel3D when its GL context is being torn down. Do not
+	 * overwrite.
+	 * <p>
+	 * Releases this item's own GL resources via {@link #dispose(GLAutoDrawable)},
+	 * then recurses into children so a subtree is fully released with one call.
+	 * </p>
+	 *
+	 * @param drawable the OpenGL drawable being disposed
+	 */
+	public final void disposeItem(GLAutoDrawable drawable) {
+		dispose(drawable);
+
+		for (Item3D item : childrenSnapshot()) {
+			item.disposeItem(drawable);
+		}
+	}
+
+	/**
+	 * Override to release any GL resources this item owns (textures, display
+	 * lists, text renderers, etc.).
+	 *
+	 * <p>
+	 * The default implementation does nothing. Items that lazily allocate
+	 * GL-backed resources — for example a JOGL {@code TextRenderer} — should
+	 * override this to release them and null out the field so a subsequent
+	 * {@code draw} call (if any) lazily recreates it.
+	 * </p>
+	 *
+	 * @param drawable the OpenGL drawable being disposed
+	 */
+	protected void dispose(GLAutoDrawable drawable) {
+		// no resources to release by default
+	}
 
 	/**
 	 * Get a 3D property
@@ -426,17 +477,25 @@ public abstract class Item3D {
 	}
 
 	/**
-	 * Add a child item
+	 * Add a child item.
+	 * <p>
+	 * The remove-then-add (to move an existing child to the end) is performed
+	 * under {@code synchronized(this)} so it is atomic with respect to {@link
+	 * #childrenSnapshot()} — a concurrent drawer/disposer can never observe the
+	 * child transiently missing.
+	 * </p>
 	 *
 	 * @param item the child item
 	 */
 	public void addChild(Item3D item) {
 		if (item != null) {
-			if (_children == null) {
-				_children = new Vector<>();
+			synchronized (this) {
+				if (_children == null) {
+					_children = new Vector<>();
+				}
+				_children.remove(item);
+				_children.addElement(item);
 			}
-			_children.remove(item);
-			_children.addElement(item);
 			item._parent = this;
 		}
 	}
@@ -447,8 +506,12 @@ public abstract class Item3D {
 	 * @param item the chold item
 	 */
 	public void removeChild(Item3D item) {
-		if ((_children != null) && (item != null)) {
-			_children.remove(item);
+		if (item != null) {
+			synchronized (this) {
+				if (_children != null) {
+					_children.remove(item);
+				}
+			}
 		}
 	}
 

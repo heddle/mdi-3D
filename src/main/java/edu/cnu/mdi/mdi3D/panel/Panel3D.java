@@ -723,8 +723,13 @@ public class Panel3D extends JPanel implements GLEventListener {
 	 */
 	public void addItem(Item3D item) {
 		if (item != null) {
-			_itemList.remove(item);
-			_itemList.add(item);
+			// Atomic with respect to display()'s synchronized(_itemList) snapshot:
+			// without this, a concurrent snapshot taken between the remove and the
+			// add would observe the item as transiently missing.
+			synchronized (_itemList) {
+				_itemList.remove(item);
+				_itemList.add(item);
+			}
 		}
 	}
 
@@ -740,8 +745,10 @@ public class Panel3D extends JPanel implements GLEventListener {
 	 */
 	public void addItem(int index, Item3D item) {
 		if (item != null) {
-			_itemList.remove(item);
-			_itemList.add(index, item);
+			synchronized (_itemList) {
+				_itemList.remove(item);
+				_itemList.add(index, item);
+			}
 		}
 	}
 
@@ -1100,14 +1107,26 @@ public class Panel3D extends JPanel implements GLEventListener {
 	 * Dispose of OpenGL resources associated with this listener.
 	 *
 	 * <p>
-	 * The current implementation does not allocate explicit GL resources that
-	 * require manual release, so this method is intentionally empty.
+	 * {@code Panel3D} itself holds no explicit GL resources, but items on the
+	 * panel may — for example a text-drawing item's lazily-created JOGL
+	 * {@code TextRenderer}, which owns a GPU texture atlas. This gives every
+	 * item (and its children) a chance to release those via {@link
+	 * Item3D#disposeItem(GLAutoDrawable)} before the GL context goes away, so
+	 * repeatedly opening and closing 3D views doesn't leak texture memory.
 	 * </p>
 	 *
 	 * @param drawable JOGL drawable being disposed
 	 */
 	@Override
 	public void dispose(GLAutoDrawable drawable) {
-	    // no resources to release
+		final java.util.List<Item3D> snapshot;
+		synchronized (_itemList) {
+			snapshot = new java.util.ArrayList<>(_itemList);
+		}
+		for (Item3D item : snapshot) {
+			if (item != null) {
+				item.disposeItem(drawable);
+			}
+		}
 	}
 }

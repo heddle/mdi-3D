@@ -157,6 +157,15 @@ public class Axis3D extends Line3D {
 		}
 	}
 
+	/** Releases the lazily-created tick-label {@link TextRenderer} and its GPU texture atlas. */
+	@Override
+	protected void dispose(GLAutoDrawable drawable) {
+		if (_renderer != null) {
+			_renderer.dispose();
+			_renderer = null;
+		}
+	}
+
 	@Override
 	public void draw(GLAutoDrawable drawable) {
 		super.draw(drawable);

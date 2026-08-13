@@ -529,6 +529,23 @@ public class ScatterPlot3D extends Item3D {
     // Item3D contract — called on the GL render thread / EDT
     // -----------------------------------------------------------------------
 
+    /**
+     * Releases the lazily-created axis-title and tick-label {@link
+     * TextRendering3D} renderers, which each own a GPU texture atlas via
+     * their underlying JOGL {@code TextRenderer}.
+     */
+    @Override
+    protected void dispose(GLAutoDrawable drawable) {
+        if (_axisTitleRenderer != null) {
+            _axisTitleRenderer.dispose();
+            _axisTitleRenderer = null;
+        }
+        if (_tickLabelRenderer != null) {
+            _tickLabelRenderer.dispose();
+            _tickLabelRenderer = null;
+        }
+    }
+
     @Override
     public void draw(GLAutoDrawable drawable) {
         // Drain any pending points that arrived since the last frame

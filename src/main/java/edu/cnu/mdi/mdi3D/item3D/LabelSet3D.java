@@ -121,6 +121,15 @@ public class LabelSet3D extends Item3D {
         _labels = labels;
     }
 
+    /** Releases the lazily-created {@link TextRenderer} and its GPU texture atlas. */
+    @Override
+    protected void dispose(GLAutoDrawable drawable) {
+        if (_textRenderer != null) {
+            _textRenderer.dispose();
+            _textRenderer = null;
+        }
+    }
+
     @Override
     public void draw(GLAutoDrawable drawable) {
 
