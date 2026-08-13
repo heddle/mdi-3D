@@ -568,6 +568,7 @@ public class Panel3D extends JPanel implements GLEventListener {
 	 */
 	@Override
 	public void init(GLAutoDrawable drawable) {
+
 		glu = new GLU();
 		GL2 gl = drawable.getGL().getGL2();
 
@@ -1119,13 +1120,22 @@ public class Panel3D extends JPanel implements GLEventListener {
 	 */
 	@Override
 	public void dispose(GLAutoDrawable drawable) {
+
 		final java.util.List<Item3D> snapshot;
 		synchronized (_itemList) {
 			snapshot = new java.util.ArrayList<>(_itemList);
 		}
 		for (Item3D item : snapshot) {
-			if (item != null) {
+			if (item == null) {
+				continue;
+			}
+			// Defensive: one item's dispose() throwing must not abort disposal of
+			// the rest, nor propagate out of this GLEventListener callback and
+			// potentially corrupt JOGL's dispose/reinit sequence for the panel.
+			try {
 				item.disposeItem(drawable);
+			} catch (RuntimeException e) {
+				e.printStackTrace();
 			}
 		}
 	}

@@ -119,6 +119,14 @@ public class GeometrySlice3DView extends PlainView3D {
         super(props);
         add(createControlPanel(), BorderLayout.SOUTH);
 
+        // Without this, BorderLayout never (re)computes the SOUTH control panel's
+        // allocation after it's added here: all subsequent growth goes to CENTER
+        // (the GLJPanel) and the control panel stays pinned at whatever size it
+        // implicitly had, clipping it. SimulationView3D does the same
+        // doLayout()/validate() after adding its control panel, for the same reason.
+        doLayout();
+        validate();
+
         // The Panel3D constructor calls createInitialItems() before this view's
         // fields have finished initializing. The panel schedules the first
         // rebuild for later, but this second call is harmless and makes the

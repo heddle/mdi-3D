@@ -344,14 +344,30 @@ public class ScatterPlot3D extends Item3D {
         } finally {
             _pointsLock.writeLock().unlock();
         }
-        SwingUtilities.invokeLater(() -> {
+
+        Runnable finishOnEdt = () -> {
             _committedPoints.clear();
             BoundsListener listener = _boundsListener;
             if (listener != null) {
                 listener.boundsChanged(new float[]{ minX, maxX, minY, maxY, minZ, maxZ });
             }
             _panel3D.softRefresh();
-        });
+        };
+
+        // _committedPoints is EDT-only (see field doc). Unconditionally
+        // deferring this via invokeLater — even when clear() is itself called
+        // on the EDT — opened a race: a caller that clears and then
+        // immediately re-adds points on the EDT (as loadSurfaceData() does)
+        // could have an intervening draw() drain the fresh points into
+        // _committedPoints before this deferred callback ran, and the stale
+        // clear would then wipe out that brand-new data. Run it inline when
+        // we're already on the EDT; only hop for off-EDT callers, which
+        // can't touch _committedPoints directly.
+        if (SwingUtilities.isEventDispatchThread()) {
+            finishOnEdt.run();
+        } else {
+            SwingUtilities.invokeLater(finishOnEdt);
+        }
     }
 
     // -----------------------------------------------------------------------

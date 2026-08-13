@@ -121,10 +121,26 @@ public abstract class PlainView3D extends BaseView implements ActionListener {
 	}
 
 	/**
-	 * When a 3D internal frame is resized, schedule a refresh.
+	 * When a 3D internal frame is resized, re-flow this view's own
+	 * {@code BorderLayout} before scheduling a 3D refresh.
+	 *
+	 * <p>
+	 * Subclasses that add extra components at other {@code BorderLayout}
+	 * regions (e.g. a control strip at {@code SOUTH}) may contain a
+	 * {@code FlowLayout} bar that wraps to a different number of rows as the
+	 * view gets narrower or wider. Without an explicit layout pass here, a
+	 * resize driven programmatically by the MDI virtual desktop (rather than
+	 * a native window-manager drag) does not reliably trigger Swing's normal
+	 * invalidate/validate cascade, so a newly-wrapped row's extra height is
+	 * never accounted for and gets clipped at the view's bottom edge.
+	 * </p>
+	 *
+	 * @param e the resize event
 	 */
 	@Override
 	public void componentResized(ComponentEvent e) {
+		doLayout();
+		validate();
 		if (_panel3D != null) _panel3D.softRefresh();
 	}
 
