@@ -2,7 +2,6 @@ package edu.cnu.mdi.mdi3D.view3D.geoslice;
 
 import java.awt.BorderLayout;
 import java.awt.Color;
-import java.awt.Dimension;
 import java.awt.FlowLayout;
 import java.util.Properties;
 
@@ -231,11 +230,10 @@ public class GeometrySlice3DView extends PlainView3D {
      * @return control panel
      */
     private JPanel createControlPanel() {
-        JPanel panel = new JPanel(new FlowLayout(FlowLayout.LEFT, 8, 4));
+        JPanel panel = new JPanel(new BorderLayout(8, 4));
         panel.setBorder(BorderFactory.createEtchedBorder());
 
         phiLabel = new JLabel(labelText());
-        phiLabel.setPreferredSize(new Dimension(70, 22));
         phiLabel.setHorizontalAlignment(SwingConstants.RIGHT);
         phiLabel.setFont(Fonts.smallFont);
 
@@ -244,7 +242,6 @@ public class GeometrySlice3DView extends PlainView3D {
         slider.setMinorTickSpacing(1);
         slider.setPaintTicks(true);
         slider.setPaintLabels(true);
-        slider.setPreferredSize(new Dimension(360, 48));
 
         slider.addChangeListener((ChangeEvent e) -> {
             phiDeg = slider.getValue();
@@ -255,10 +252,13 @@ public class GeometrySlice3DView extends PlainView3D {
         JLabel note = new JLabel("yellow plane is the current constant-\u03c6 slice");
         note.setFont(Fonts.smallFont);
 
-        panel.add(new JLabel("Slice angle:"));
-        panel.add(phiLabel);
-        panel.add(slider);
-        panel.add(note);
+        JPanel labelPanel = new JPanel(new FlowLayout(FlowLayout.LEFT, 4, 0));
+        labelPanel.add(new JLabel("Slice angle:"));
+        labelPanel.add(phiLabel);
+
+        panel.add(labelPanel, BorderLayout.WEST);
+        panel.add(slider, BorderLayout.CENTER);
+        panel.add(note, BorderLayout.EAST);
 
         return panel;
     }

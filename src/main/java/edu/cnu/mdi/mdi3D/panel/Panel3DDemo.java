@@ -2,7 +2,10 @@ package edu.cnu.mdi.mdi3D.panel;
 
 import java.awt.BorderLayout;
 import java.awt.Color;
+import java.awt.Dimension;
 import java.awt.Font;
+import java.awt.GraphicsEnvironment;
+import java.awt.Rectangle;
 import java.awt.event.WindowAdapter;
 import java.awt.event.WindowEvent;
 
@@ -32,8 +35,21 @@ public class Panel3DDemo extends JFrame {
 		};
 
 		addWindowListener(windowAdapter);
-		setBounds(200, 100, 900, 700);
+		Rectangle usable = GraphicsEnvironment.getLocalGraphicsEnvironment()
+				.getMaximumWindowBounds();
+		setSize(demoWindowSize(usable));
+		setLocationRelativeTo(null);
 
+	}
+
+	/** Return a screen-relative initial size for the standalone demo window. */
+	static Dimension demoWindowSize(Rectangle usableBounds) {
+		if (usableBounds == null) {
+			return new Dimension(1, 1);
+		}
+		return new Dimension(
+				Math.max(1, (int) Math.round(usableBounds.width * 0.65)),
+				Math.max(1, (int) Math.round(usableBounds.height * 0.75)));
 	}
 
 	// Create a Panel3D with some items just for demo
