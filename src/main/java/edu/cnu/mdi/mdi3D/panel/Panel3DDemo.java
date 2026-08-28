@@ -6,11 +6,14 @@ import java.awt.Dimension;
 import java.awt.Font;
 import java.awt.GraphicsEnvironment;
 import java.awt.Rectangle;
+import java.awt.event.KeyEvent;
 import java.awt.event.WindowAdapter;
 import java.awt.event.WindowEvent;
 
+import javax.swing.JComponent;
 import javax.swing.JFrame;
 
+import edu.cnu.mdi.mdi3D.adapter3D.KeyboardLabel;
 import edu.cnu.mdi.mdi3D.item3D.Axes3D;
 import edu.cnu.mdi.mdi3D.item3D.Cube;
 import edu.cnu.mdi.mdi3D.item3D.Cylinder;
@@ -104,6 +107,20 @@ public class Panel3DDemo extends JFrame {
 			@Override
 			public float getZStep() {
 				return (zmax - zmin) / 50f;
+			}
+
+			// Makes the L/R/U/D/J/K/1-4 keyboard shortcuts (see KeyBindings3D)
+			// discoverable instead of living only in source comments: each
+			// button below fires the exact same handler a keystroke would.
+			@Override
+			protected JComponent addSouth() {
+				return new KeyboardLabel(this,
+						"pan/dolly, or jump to a preset view (Shift+X/Y/Z reverses rotation)",
+						new String[] { "L", "R", "U", "D", "J", "K", "1", "2", "3", "4" },
+						new int[] { KeyEvent.VK_L, KeyEvent.VK_R, KeyEvent.VK_U, KeyEvent.VK_D,
+								KeyEvent.VK_J, KeyEvent.VK_K,
+								KeyEvent.VK_1, KeyEvent.VK_2, KeyEvent.VK_3, KeyEvent.VK_4 },
+						new boolean[] { false, false, false, false, false, false, false, false, false, false });
 			}
 		};
 	}

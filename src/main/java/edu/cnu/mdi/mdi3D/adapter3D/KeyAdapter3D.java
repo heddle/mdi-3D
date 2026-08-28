@@ -1,36 +1,33 @@
 package edu.cnu.mdi.mdi3D.adapter3D;
 
 import java.awt.event.KeyEvent;
-import java.awt.event.KeyListener;
 
 import edu.cnu.mdi.mdi3D.panel.Panel3D;
 
-public class KeyAdapter3D implements KeyListener {
+/**
+ * Shared static logic for MDI-3D's fixed keyboard/legend commands: pan
+ * (L/R/U/D), dolly (J/K), incremental rotation (X/Y/Z, tripled when shifted),
+ * and four canonical axis-aligned views (1-4).
+ * <p>
+ * This class holds only {@link #handleVK}. Both real keyboard input (via
+ * {@link KeyBindings3D}, which registers Swing {@code InputMap}/
+ * {@code ActionMap} bindings) and the on-screen {@link KeyboardLabel} legend
+ * — whose buttons let a user click a key's effect instead of pressing it —
+ * route through this one method, so a keystroke and its corresponding legend
+ * button can never disagree about what they do.
+ * </p>
+ */
+public final class KeyAdapter3D {
 
 	// steps in rotation angle
 	private static final float DTHETA = 2f; // degrees
 
-	private Panel3D _panel3D;
-
-	public KeyAdapter3D(Panel3D panel3D) {
-		_panel3D = panel3D;
-	}
-
-	@Override
-	public void keyTyped(KeyEvent e) {
-	}
-
-	@Override
-	public void keyPressed(KeyEvent e) {
-
-		int keyCode = e.getKeyCode();
-		boolean shifted = e.isShiftDown();
-
-		handleVK(_panel3D, keyCode, shifted);
+	private KeyAdapter3D() {
+		// static utility; not instantiable
 	}
 
 	/**
-	 * Respond to a key stroke or mimic a key stroke
+	 * Respond to a key stroke, or a {@link KeyboardLabel} button mimicking one.
 	 *
 	 * @param panel3D the owner panel
 	 * @param keyCode the key code
@@ -88,15 +85,6 @@ public class KeyAdapter3D implements KeyListener {
 			panel3D.refresh();
 		}
 
-	}
-
-	@Override
-	public void keyReleased(KeyEvent e) {
-		int keyCode = e.getKeyCode();
-
-		if (keyCode == KeyEvent.VK_F5) {
-			_panel3D.refresh();
-		}
 	}
 
 }
