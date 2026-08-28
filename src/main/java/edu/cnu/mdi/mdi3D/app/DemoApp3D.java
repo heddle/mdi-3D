@@ -76,6 +76,18 @@ public class DemoApp3D extends BaseMDIApplication {
 		return 7;
 	} // opts in; 0 = disabled
 
+	// This is a single-window demo tool, not an app embedding MDI inside
+	// something larger, so the native close button should behave the same
+	// as a Quit action: both should actually end the process. Without this,
+	// disposing every window does not by itself terminate the JVM -- AWT's
+	// own event-dispatch/shutdown threads are not daemon threads -- which is
+	// why the process (and its Dock icon on macOS) used to linger after the
+	// native close button until something else forced an exit.
+	@Override
+	protected boolean exitOnClose() {
+		return true;
+	}
+
 
 	/**
 	 * Public access to the singleton.
@@ -84,7 +96,7 @@ public class DemoApp3D extends BaseMDIApplication {
 	 */
 	public static DemoApp3D getInstance() {
 		if (INSTANCE == null) {
-			INSTANCE = new DemoApp3D(PropertyUtils.TITLE, "Demo Application of MDI Views",
+			INSTANCE = new DemoApp3D(PropertyUtils.TITLE, "Demo Application of MDI 3D Views",
 					PropertyUtils.BACKGROUNDIMAGE,
 					Environment.MDI_RESOURCE_PATH + "images/mdilogo.png",
 					PropertyUtils.FRACTION, 0.8);
