@@ -1,6 +1,7 @@
 package edu.cnu.mdi.mdi3D.view3D;
 
 import java.awt.BorderLayout;
+import java.awt.Component;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.awt.event.ComponentEvent;
@@ -165,7 +166,22 @@ public abstract class PlainView3D extends BaseView implements ActionListener {
 		// support containers.
 	    return null;
 	}
-	
+
+	/**
+	 * {@inheritDoc}
+	 *
+	 * <p>
+	 * With no container, {@link BaseView}'s default would fall back to
+	 * {@code this} — the whole view, menu bar and any north/south control
+	 * panels included. What a 3D view's image should actually be is just the
+	 * rendered frame, so this returns the {@code GLJPanel} directly.
+	 * </p>
+	 */
+	@Override
+	public Component getImageComponent() {
+		return (_panel3D != null) ? _panel3D.getGLJPanel() : this;
+	}
+
 	/**
 	 * Install a standard "Image" menu, giving every MDI-3D view a way to save
 	 * or copy a snapshot of the current 3D frame without each demo wiring its
@@ -173,18 +189,20 @@ public abstract class PlainView3D extends BaseView implements ActionListener {
 	 *
 	 * <p>
 	 * Delegates entirely to {@link TakePicture#takePicture(java.awt.Component)}
-	 * — the same capture path 2D MDI views already use — applied to the
-	 * panel's {@code GLJPanel}. This works because {@code GLJPanel} is
-	 * FBO-backed and paints like any other Swing component, so the ordinary
-	 * component-snapshot path captures the current rendered frame correctly.
-	 * {@code takePicture} itself asks whether to save a PNG file or copy to
-	 * the clipboard, so this one menu item covers both.
+	 * — the same capture path 2D MDI views already use — applied to
+	 * {@link #getImageComponent()} (the {@code GLJPanel}, not {@code this}).
+	 * This works because {@code GLJPanel} is FBO-backed and paints like any
+	 * other Swing component, so the ordinary component-snapshot path
+	 * captures the current rendered frame correctly. {@code takePicture}
+	 * itself asks whether to save a PNG file or copy to the clipboard, so
+	 * this one menu item covers both.
 	 * </p>
 	 *
 	 * <p>
-	 * The menu item reads {@link #_panel3D} at click time (not at menu-build
-	 * time, when the field has not yet been assigned by the constructor), so
-	 * installing this before {@link #_panel3D} exists is safe.
+	 * The menu item calls {@link #getImageComponent()} at click time (not at
+	 * menu-build time, when {@link #_panel3D} has not yet been assigned by
+	 * the constructor), so installing this before {@link #_panel3D} exists is
+	 * safe.
 	 * </p>
 	 *
 	 * @param menuBar the menu bar on which to install the menu
@@ -196,7 +214,7 @@ public abstract class PlainView3D extends BaseView implements ActionListener {
 
 		JMenu imageMenu = new JMenu("Image");
 		JMenuItem saveItem = new JMenuItem("Save/Copy Image...");
-		saveItem.addActionListener(e -> TakePicture.takePicture(_panel3D.getGLJPanel()));
+		saveItem.addActionListener(e -> TakePicture.takePicture(getImageComponent()));
 		imageMenu.add(saveItem);
 		menuBar.add(imageMenu);
 	}
