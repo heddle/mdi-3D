@@ -2,6 +2,7 @@ package edu.cnu.mdi.mdi3D.view2D;
 
 import java.awt.Color;
 import java.awt.Font;
+import java.awt.event.ComponentEvent;
 import java.awt.geom.Point2D;
 
 import edu.cnu.mdi.item.TextItem;
@@ -32,14 +33,46 @@ public class DrawingDemoView extends DrawingView {
 			+ "that 2D and 3D views can coexist in the same MDI\n"
 			+ "application.";
 
+	/** Guards against adding the explanation item more than once. */
+	private boolean explanationAdded;
+
 	/**
 	 * Construct the view using {@link DrawingView}'s own defaults (toolbar,
-	 * background, aspect, etc.), just with a different title and one
-	 * pre-placed text item.
+	 * background, aspect, etc.), just with a different title.
+	 * <p>
+	 * The explanatory {@link TextItem} is <em>not</em> created here. A
+	 * {@code TextItem}'s world-space bounds are derived from the container's
+	 * current local-to-world mapping ({@code IContainer.worldToLocal}/
+	 * {@code localToWorld}), which depends on the container's canvas having a
+	 * real, realized pixel size. Immediately after construction — before this
+	 * view has been laid out inside the desktop — that size can still be
+	 * zero, which would give the item degenerate (invisible) bounds. See
+	 * {@link #componentShown(ComponentEvent)}.
+	 * </p>
 	 */
 	public DrawingDemoView() {
 		super((Object[]) null);
 		setTitle(TITLE);
+	}
+
+	/**
+	 * {@inheritDoc}
+	 *
+	 * <p>
+	 * Adds the explanatory text item the first time this view is actually
+	 * shown with a real size, exactly the same "lazily created view" pattern
+	 * {@code PlainView3D} uses in MDI-3D for the same reason. Guarded by
+	 * {@link #explanationAdded} so a later hide/show cycle does not add it
+	 * twice.
+	 * </p>
+	 */
+	@Override
+	public void componentShown(ComponentEvent e) {
+		super.componentShown(e);
+		if (explanationAdded) {
+			return;
+		}
+		explanationAdded = true;
 
 		Font font = new Font("SansSerif", Font.PLAIN, 14);
 		new TextItem(getAnnotationLayer(), new Point2D.Double(0.06, 0.55), font,
