@@ -7,6 +7,7 @@ import edu.cnu.mdi.mdi3D.view3D.aizawaDemo.AizawaDemoView;
 import edu.cnu.mdi.mdi3D.view3D.geoslice.GeometrySlice3DView;
 import edu.cnu.mdi.mdi3D.view3D.globe.GlobeView3D;
 import edu.cnu.mdi.mdi3D.view3D.kineticsDemo.KineticsDemoView;
+import edu.cnu.mdi.mdi3D.view3D.logoDemo.LogoDemoView;
 import edu.cnu.mdi.mdi3D.view3D.scatterDemo.ScatterPlot3DDemo;
 import edu.cnu.mdi.util.Environment;
 import edu.cnu.mdi.util.PropertyUtils;
@@ -54,6 +55,7 @@ public class DemoApp3D extends BaseMDIApplication {
 	private AizawaDemoView aizawaView;
 	private ScatterPlot3DDemo scatterPlot3DView;
 	private GeometrySlice3DView geometrySlice3DView;
+	private LogoDemoView logoView;
 
 	/**
 	 * Private constructor: use {@link #getInstance()}.
@@ -115,12 +117,16 @@ public class DemoApp3D extends BaseMDIApplication {
 		
 		// geometry slice demo
 		geometrySlice3DView = GeometrySlice3DView.createGeometrySlice3DView();
+
+		// rotating, lit MDI logo demo
+		logoView = LogoDemoView.createLogoView();
 	}
 
 	// put the views in the virtual desktop in a reasonable default layout.
 	@Override
 	protected void defaultViewLayout() {
 		virtualViewMove(kineticsView, 0, VirtualView.TOPCENTER);
+		virtualViewMove(logoView, 1, VirtualView.CENTER);
 		virtualViewMove(aizawaView, 2, VirtualView.CENTER);
 		virtualViewMove(scatterPlot3DView, 3, VirtualView.BOTTOMCENTER);
 		virtualViewMove(logView, 4, VirtualView.UPPERLEFT);

@@ -24,6 +24,9 @@ public class Cube extends Item3D {
 	// frame?
 	protected boolean _frame;
 
+	// Phong lighting off by default (preserves prior visuals)
+	private boolean _lighted = false;
+
 	/**
 	 * Create a cube
 	 * @param panel3D
@@ -47,9 +50,37 @@ public class Cube extends Item3D {
 		setFillColor(color);
 	}
 
+	/**
+	 * Enable or disable Phong-style lighting for this cube.
+	 *
+	 * <p>When enabled, each of the six faces is drawn with its own face normal
+	 * via {@link Support3D#drawShadedRectangularSolid}, so shading visibly
+	 * changes as the cube (or the scene around it) rotates. Disabled by default,
+	 * matching the flat-colour appearance existing callers already expect.
+	 *
+	 * @param lighted {@code true} to enable lighting; {@code false} for flat colour
+	 */
+	public void setLighted(boolean lighted) {
+		_lighted = lighted;
+	}
+
+	/**
+	 * Whether Phong-style lighting is enabled for this cube.
+	 *
+	 * @return {@code true} if lighting is enabled
+	 */
+	public boolean isLighted() {
+		return _lighted;
+	}
+
 	@Override
 	public void draw(GLAutoDrawable drawable) {
-		Support3D.drawRectangularSolid(drawable, xc, yc, zc,length, length, length, getFillColor(), 1, _frame);
+		if (_lighted) {
+			Support3D.drawShadedRectangularSolid(drawable, xc, yc, zc, length, length, length, getFillColor(), null,
+					1, _frame, true);
+		} else {
+			Support3D.drawRectangularSolid(drawable, xc, yc, zc, length, length, length, getFillColor(), 1, _frame);
+		}
 	}
 
 	@Override

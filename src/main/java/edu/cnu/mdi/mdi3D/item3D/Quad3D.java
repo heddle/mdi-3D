@@ -15,6 +15,9 @@ public class Quad3D extends Item3D {
 	// frame?
 	protected boolean _frame;
 
+	// Phong lighting off by default (preserves prior visuals)
+	private boolean _lighted = false;
+
 	/**
 	 * Create a quad from an array of coordinates
 	 *
@@ -109,9 +112,38 @@ public class Quad3D extends Item3D {
 		return new Quad3D(panel3d, coords, color, lineWidth, frame);
 	}
 
+	/**
+	 * Enable or disable Phong-style lighting for this quad.
+	 *
+	 * <p>When enabled, the quad is drawn with a single face normal (computed via
+	 * {@link Support3D#drawShadedQuad}) so its shading visibly changes as it — or
+	 * the scene around it — rotates. Works for a quad at any orientation, not
+	 * just axis-aligned ones. Disabled by default, matching the flat-colour
+	 * appearance existing callers already expect.
+	 *
+	 * @param lighted {@code true} to enable lighting; {@code false} for flat colour
+	 */
+	public void setLighted(boolean lighted) {
+		_lighted = lighted;
+	}
+
+	/**
+	 * Whether Phong-style lighting is enabled for this quad.
+	 *
+	 * @return {@code true} if lighting is enabled
+	 */
+	public boolean isLighted() {
+		return _lighted;
+	}
+
 	@Override
 	public void draw(GLAutoDrawable drawable) {
-		Support3D.drawQuads(drawable, _coords, getFillColor(), getLineWidth(), _frame);
+		if (_lighted) {
+			Color lineColor = _frame ? getFillColor().darker() : null;
+			Support3D.drawShadedQuad(drawable, _coords, getFillColor(), lineColor, getLineWidth(), true);
+		} else {
+			Support3D.drawQuads(drawable, _coords, getFillColor(), getLineWidth(), _frame);
+		}
 	}
 
 	public float[] getCentroid() {

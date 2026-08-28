@@ -21,6 +21,9 @@ public class Cylinder extends Item3D {
 	private boolean _extend;
 	private float _extensionFactor = 2;
 
+	// Phong lighting off by default (preserves prior visuals)
+	private boolean _lighted = false;
+
 	/**
 	 * Constructor for a Cylinder item in 3D space.
 	 *
@@ -70,6 +73,29 @@ public class Cylinder extends Item3D {
 		this(panel3D, data[0], data[1], data[2], data[3], data[4], data[5], data[6], color);
 	}
 
+	/**
+	 * Enable or disable Phong-style lighting for this cylinder.
+	 *
+	 * <p>When enabled, the tube is drawn with smooth per-vertex normals via
+	 * {@link Support3D#drawShadedTube}, so shading visibly changes as the
+	 * cylinder (or the scene around it) rotates. Disabled by default, matching
+	 * the flat-colour appearance existing callers already expect.
+	 *
+	 * @param lighted {@code true} to enable lighting; {@code false} for flat colour
+	 */
+	public void setLighted(boolean lighted) {
+		_lighted = lighted;
+	}
+
+	/**
+	 * Whether Phong-style lighting is enabled for this cylinder.
+	 *
+	 * @return {@code true} if lighting is enabled
+	 */
+	public boolean isLighted() {
+		return _lighted;
+	}
+
 	@Override
 	public void draw(GLAutoDrawable drawable) {
 		if (_extend) {
@@ -87,10 +113,18 @@ public class Cylinder extends Item3D {
 
 			float z1 = _z1 - sm1 * dz;
 			float z2 = _z1 + _extensionFactor * dz;
-			Support3D.drawTube(drawable, x1, y1, z1, x2, y2, z2, _radius, _color);
+			if (_lighted) {
+				Support3D.drawShadedTube(drawable, x1, y1, z1, x2, y2, z2, _radius, _color, true);
+			} else {
+				Support3D.drawTube(drawable, x1, y1, z1, x2, y2, z2, _radius, _color);
+			}
 
 		} else {
-			Support3D.drawTube(drawable, _x1, _y1, _z1, _x2, _y2, _z2, _radius, _color);
+			if (_lighted) {
+				Support3D.drawShadedTube(drawable, _x1, _y1, _z1, _x2, _y2, _z2, _radius, _color, true);
+			} else {
+				Support3D.drawTube(drawable, _x1, _y1, _z1, _x2, _y2, _z2, _radius, _color);
+			}
 		}
 	}
 

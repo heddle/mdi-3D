@@ -21,6 +21,7 @@ public class Sphere extends Item3D {
 	private float[] _theta; // Polar angles [0, π]
 	private float[] _phi; // Azimuthal angles [-π, π]
 	private Color _gridColor = Color.BLACK; // Default gridline color
+	private boolean _lighted = false; // Phong lighting off by default (preserves prior visuals)
 
 	/**
 	 * Constructor for a Sphere item in 3D space.
@@ -84,9 +85,38 @@ public class Sphere extends Item3D {
 		_gridColor = gridColor;
 	}
 
+	/**
+	 * Enable or disable Phong-style lighting for this sphere.
+	 *
+	 * <p>When enabled, the sphere is drawn via
+	 * {@link Support3D#solidShadedSphere(GLAutoDrawable, float, float, float,
+	 * float, int, int, Color, boolean)} with a fixed directional light, so its
+	 * shading visibly changes as the sphere (or the scene around it) rotates.
+	 * Disabled by default, matching the flat-colour appearance existing callers
+	 * already expect.
+	 *
+	 * @param lighted {@code true} to enable lighting; {@code false} for flat colour
+	 */
+	public void setLighted(boolean lighted) {
+		_lighted = lighted;
+	}
+
+	/**
+	 * Whether Phong-style lighting is enabled for this sphere.
+	 *
+	 * @return {@code true} if lighting is enabled
+	 */
+	public boolean isLighted() {
+		return _lighted;
+	}
+
 	@Override
 	public void draw(GLAutoDrawable drawable) {
-		Support3D.solidSphere(drawable, _x, _y, _z, _radius, _slices, _stacks, _color);
+		if (_lighted) {
+			Support3D.solidShadedSphere(drawable, _x, _y, _z, _radius, _slices, _stacks, _color, true);
+		} else {
+			Support3D.solidSphere(drawable, _x, _y, _z, _radius, _slices, _stacks, _color);
+		}
 
 		if (_theta != null || _phi != null) {
 			drawGridlines(drawable);

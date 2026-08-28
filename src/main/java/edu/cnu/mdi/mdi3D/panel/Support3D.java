@@ -407,29 +407,10 @@ public class Support3D {
 			int stacks, Color color, boolean enableLighting) {
 		GL2 gl = drawable.getGL().getGL2();
 
-		setColor(gl, color);
-
 		if (enableLighting) {
-			gl.glEnable(GLLightingFunc.GL_LIGHTING);
-			gl.glEnable(GLLightingFunc.GL_LIGHT0);
-
-			float[] lightPosition = { 1.0f, 1.0f, 1.0f, 0.0f }; // directional
-			float[] lightDiffuse  = { 1.0f, 1.0f, 1.0f, 1.0f };
-			float[] lightSpecular = { 1.0f, 1.0f, 1.0f, 1.0f };
-
-			gl.glLightfv(GLLightingFunc.GL_LIGHT0, GLLightingFunc.GL_POSITION, lightPosition, 0);
-			gl.glLightfv(GLLightingFunc.GL_LIGHT0, GLLightingFunc.GL_DIFFUSE,  lightDiffuse,  0);
-			gl.glLightfv(GLLightingFunc.GL_LIGHT0, GLLightingFunc.GL_SPECULAR, lightSpecular, 0);
-
-			float[] matAmbient   = { 0.2f, 0.2f, 0.2f, 1.0f };
-			float[] matDiffuse   = { color.getRed() / 255f, color.getGreen() / 255f, color.getBlue() / 255f, 1.0f };
-			float[] matSpecular  = { 1.0f, 1.0f, 1.0f, 1.0f };
-			float[] matShininess = { 50.0f };
-
-			gl.glMaterialfv(GL.GL_FRONT, GLLightingFunc.GL_AMBIENT,   matAmbient,   0);
-			gl.glMaterialfv(GL.GL_FRONT, GLLightingFunc.GL_DIFFUSE,   matDiffuse,   0);
-			gl.glMaterialfv(GL.GL_FRONT, GLLightingFunc.GL_SPECULAR,  matSpecular,  0);
-			gl.glMaterialfv(GL.GL_FRONT, GLLightingFunc.GL_SHININESS, matShininess, 0);
+			beginLighting(gl, color);
+		} else {
+			setColor(gl, color);
 		}
 
 		gl.glPushMatrix();
@@ -438,8 +419,82 @@ public class Support3D {
 		gl.glPopMatrix();
 
 		if (enableLighting) {
-			gl.glDisable(GLLightingFunc.GL_LIGHTING);
+			endLighting(gl);
 		}
+	}
+
+	/**
+	 * Enable {@code GL_LIGHT0} as a fixed directional light and apply a Phong
+	 * material derived from {@code color}, shared by every {@code *Shaded*}
+	 * drawing method in this class.
+	 *
+	 * <p>The light is positioned at {@code (1, 1, 1)} with white diffuse and
+	 * specular components; the material uses {@code color} as its diffuse
+	 * component, a modest fixed ambient, white specular, and shininess 50. Also
+	 * sets the current color via {@link #setColor(GL2, Color)} so unlit geometry
+	 * drawn between this call and {@link #endLighting(GL2)} — for example a
+	 * frame outline — still picks up a sensible flat colour.
+	 *
+	 * <p>The light position is set under a temporarily identity modelview
+	 * matrix, not whatever matrix is active when this is called, so the light
+	 * stays fixed in a stable frame instead of rotating along with the scene
+	 * (which would make {@code N·L}, and therefore the shading, constant
+	 * regardless of rotation — the light and the surface would always be
+	 * turning together).
+	 *
+	 * <p>Callers must pair this with a matching {@link #endLighting(GL2)} call
+	 * once the lit geometry has been submitted; the two are not re-entrant.
+	 *
+	 * @param gl    the current GL2 context
+	 * @param color the material diffuse colour
+	 */
+	private static void beginLighting(GL2 gl, Color color) {
+		setColor(gl, color);
+
+		gl.glEnable(GLLightingFunc.GL_LIGHTING);
+		gl.glEnable(GLLightingFunc.GL_LIGHT0);
+
+		float[] lightPosition = { 1.0f, 1.0f, 1.0f, 0.0f }; // directional
+		float[] lightDiffuse  = { 1.0f, 1.0f, 1.0f, 1.0f };
+		float[] lightSpecular = { 1.0f, 1.0f, 1.0f, 1.0f };
+
+		// GL_POSITION is transformed by whichever modelview matrix is active
+		// at the moment of this call. By the time an item's draw() runs, that
+		// matrix already includes the panel's full scene rotation (Panel3D's
+		// display() applies translate/scale/quaternion before drawing any
+		// item). Setting the light under that matrix would make it rotate
+		// WITH the scene -- the angle between light and surface normal would
+		// never change, so nothing would visibly shade as the scene spins.
+		// Push an identity matrix just for this call so the light direction
+		// is fixed in a stable, non-rotating frame, then restore the real
+		// (rotating) matrix so the geometry drawn next transforms normally.
+		gl.glMatrixMode(GLMatrixFunc.GL_MODELVIEW);
+		gl.glPushMatrix();
+		gl.glLoadIdentity();
+		gl.glLightfv(GLLightingFunc.GL_LIGHT0, GLLightingFunc.GL_POSITION, lightPosition, 0);
+		gl.glLightfv(GLLightingFunc.GL_LIGHT0, GLLightingFunc.GL_DIFFUSE,  lightDiffuse,  0);
+		gl.glLightfv(GLLightingFunc.GL_LIGHT0, GLLightingFunc.GL_SPECULAR, lightSpecular, 0);
+		gl.glPopMatrix();
+
+		float[] matAmbient   = { 0.2f, 0.2f, 0.2f, 1.0f };
+		float[] matDiffuse   = { color.getRed() / 255f, color.getGreen() / 255f, color.getBlue() / 255f, 1.0f };
+		float[] matSpecular  = { 1.0f, 1.0f, 1.0f, 1.0f };
+		float[] matShininess = { 50.0f };
+
+		gl.glMaterialfv(GL.GL_FRONT, GLLightingFunc.GL_AMBIENT,   matAmbient,   0);
+		gl.glMaterialfv(GL.GL_FRONT, GLLightingFunc.GL_DIFFUSE,   matDiffuse,   0);
+		gl.glMaterialfv(GL.GL_FRONT, GLLightingFunc.GL_SPECULAR,  matSpecular,  0);
+		gl.glMaterialfv(GL.GL_FRONT, GLLightingFunc.GL_SHININESS, matShininess, 0);
+	}
+
+	/**
+	 * Disable lighting after a {@link #beginLighting(GL2, Color)} /
+	 * lit-geometry / {@code endLighting} sequence.
+	 *
+	 * @param gl the current GL2 context
+	 */
+	private static void endLighting(GL2 gl) {
+		gl.glDisable(GLLightingFunc.GL_LIGHTING);
 	}
 
 	/**
@@ -725,6 +780,130 @@ public class Support3D {
 	}
 
 	/**
+	 * Draws a solid axis-aligned rectangular box with optional Phong-style
+	 * lighting.
+	 *
+	 * <p>When {@code enableLighting} is {@code true}, {@code GL_LIGHT0} is
+	 * configured the same way as in {@link #solidShadedSphere}: a directional
+	 * light at {@code (1, 1, 1)} with white diffuse/specular components, and a
+	 * material with shininess 50. Each of the six faces is submitted with its
+	 * own axis-aligned face normal (via {@code glNormal3f}) so the fixed-function
+	 * lighting pipeline shades each face independently as the box rotates. The
+	 * lighting and material state are restored (lighting disabled) after drawing.
+	 * When {@code enableLighting} is {@code false}, the box is drawn with flat
+	 * colour, identical to {@link #drawRectangularSolid}.
+	 *
+	 * @param drawable  the OpenGL drawable
+	 * @param xc        x coordinate of the box centre
+	 * @param yc        y coordinate of the box centre
+	 * @param zc        z coordinate of the box centre
+	 * @param xw        total width along the X axis
+	 * @param yw        total width along the Y axis
+	 * @param zw        total width along the Z axis
+	 * @param fc        the fill colour for all six faces; also used as the
+	 *                  material diffuse colour when lighting is enabled
+	 * @param lc        the frame (outline) colour, or {@code null} to use
+	 *                  {@code fc.darker()}
+	 * @param lineWidth the frame line width in pixels
+	 * @param frame     {@code true} to draw a wireframe outline over the filled faces
+	 * @param enableLighting {@code true} to enable a directional GL_LIGHT0 and
+	 *                       Phong materials; {@code false} for flat colour
+	 */
+	public static void drawShadedRectangularSolid(GLAutoDrawable drawable, float xc, float yc, float zc, float xw,
+			float yw, float zw, Color fc, Color lc, float lineWidth, boolean frame, boolean enableLighting) {
+		GL2 gl = drawable.getGL().getGL2();
+
+		float xm = xc - xw / 2;
+		float xp = xc + xw / 2;
+		float ym = yc - yw / 2;
+		float yp = yc + yw / 2;
+		float zm = zc - zw / 2;
+		float zp = zc + zw / 2;
+
+		if (enableLighting) {
+			beginLighting(gl, fc);
+		}
+
+		Support3D.setColor(gl, fc);
+
+		gl.glBegin(GL2ES3.GL_QUADS);
+		if (enableLighting) gl.glNormal3f(0f, 0f, 1f);
+		gl.glVertex3f(xm, ym, zp);
+		gl.glVertex3f(xm, yp, zp);
+		gl.glVertex3f(xp, yp, zp);
+		gl.glVertex3f(xp, ym, zp);
+		gl.glEnd();
+
+		gl.glBegin(GL2ES3.GL_QUADS);
+		if (enableLighting) gl.glNormal3f(0f, 0f, -1f);
+		gl.glVertex3f(xm, ym, zm);
+		gl.glVertex3f(xm, yp, zm);
+		gl.glVertex3f(xp, yp, zm);
+		gl.glVertex3f(xp, ym, zm);
+		gl.glEnd();
+
+		gl.glBegin(GL2ES3.GL_QUADS);
+		if (enableLighting) gl.glNormal3f(0f, 1f, 0f);
+		gl.glVertex3f(xm, yp, zm);
+		gl.glVertex3f(xm, yp, zp);
+		gl.glVertex3f(xp, yp, zp);
+		gl.glVertex3f(xp, yp, zm);
+		gl.glEnd();
+
+		gl.glBegin(GL2ES3.GL_QUADS);
+		if (enableLighting) gl.glNormal3f(0f, -1f, 0f);
+		gl.glVertex3f(xm, ym, zm);
+		gl.glVertex3f(xm, ym, zp);
+		gl.glVertex3f(xp, ym, zp);
+		gl.glVertex3f(xp, ym, zm);
+		gl.glEnd();
+
+		gl.glBegin(GL2ES3.GL_QUADS);
+		if (enableLighting) gl.glNormal3f(1f, 0f, 0f);
+		gl.glVertex3f(xp, yp, zm);
+		gl.glVertex3f(xp, yp, zp);
+		gl.glVertex3f(xp, ym, zp);
+		gl.glVertex3f(xp, ym, zm);
+		gl.glEnd();
+
+		gl.glBegin(GL2ES3.GL_QUADS);
+		if (enableLighting) gl.glNormal3f(-1f, 0f, 0f);
+		gl.glVertex3f(xm, yp, zm);
+		gl.glVertex3f(xm, yp, zp);
+		gl.glVertex3f(xm, ym, zp);
+		gl.glVertex3f(xm, ym, zm);
+		gl.glEnd();
+
+		if (enableLighting) {
+			endLighting(gl);
+		}
+
+		if (frame) {
+			Color outline = (lc == null) ? fc.darker() : lc;
+			gl.glLineWidth(lineWidth);
+			Support3D.setColor(gl, outline);
+
+			gl.glBegin(GL.GL_LINE_STRIP);
+			gl.glVertex3f(xm, yp, zm);
+			gl.glVertex3f(xm, yp, zp);
+			gl.glVertex3f(xp, yp, zp);
+			gl.glVertex3f(xp, yp, zm);
+			gl.glVertex3f(xm, yp, zm);
+			gl.glEnd();
+
+			gl.glBegin(GL.GL_LINE_STRIP);
+			gl.glVertex3f(xm, ym, zm);
+			gl.glVertex3f(xm, ym, zp);
+			gl.glVertex3f(xp, ym, zp);
+			gl.glVertex3f(xp, ym, zm);
+			gl.glVertex3f(xm, ym, zm);
+			gl.glEnd();
+
+			gl.glLineWidth(1f);
+		}
+	}
+
+	/**
 	 * Draws a batch of quads from a packed coordinate array, with an optional
 	 * frame drawn in a darker shade of the fill colour.
 	 *
@@ -796,6 +975,104 @@ public class Support3D {
 		}
 
 		gl.glLineWidth(1f);
+	}
+
+	/**
+	 * Draws a batch of quads from a packed coordinate array with optional
+	 * Phong-style lighting.
+	 *
+	 * <p>Each group of four vertices (one quad) is submitted as its own
+	 * {@code GL_QUADS} call with a single face normal computed via the cross
+	 * product of its first two edges, so flat quads at arbitrary orientations —
+	 * not just axis-aligned ones — shade correctly as the scene rotates. This is
+	 * the batch counterpart to {@link #drawRectangularSolid}'s per-face normals,
+	 * generalized to a quad of any orientation.
+	 *
+	 * <p>When {@code enableLighting} is {@code true}, lighting is set up exactly
+	 * as in {@link #solidShadedSphere}. When {@code false}, this behaves like
+	 * {@link #drawQuads(GLAutoDrawable, float[], Color, Color, float)}.
+	 *
+	 * @param drawable       the OpenGL drawable
+	 * @param coords         packed quad vertices as {@code [x, y, z, ...]};
+	 *                       every 12 floats describe one quad
+	 * @param fillColor      the fill colour; also used as the material diffuse
+	 *                       colour when lighting is enabled
+	 * @param lineColor      the frame (outline) colour, or {@code null} for no frame
+	 * @param lineWidth      the frame line width in pixels
+	 * @param enableLighting {@code true} to enable a directional GL_LIGHT0 and
+	 *                       Phong materials; {@code false} for flat colour
+	 */
+	public static void drawShadedQuad(GLAutoDrawable drawable, float[] coords, Color fillColor, Color lineColor,
+			float lineWidth, boolean enableLighting) {
+		GL2 gl = drawable.getGL().getGL2();
+
+		if (enableLighting) {
+			beginLighting(gl, fillColor);
+		} else {
+			setColor(gl, fillColor);
+		}
+
+		int numQuads = coords.length / 12;
+		for (int i = 0; i < numQuads; i++) {
+			int j = i * 12;
+			gl.glBegin(GL2ES3.GL_QUADS);
+			if (enableLighting) {
+				float[] n = quadFaceNormal(coords, j);
+				gl.glNormal3f(n[0], n[1], n[2]);
+			}
+			gl.glVertex3f(coords[j],     coords[j + 1],  coords[j + 2]);
+			gl.glVertex3f(coords[j + 3], coords[j + 4],  coords[j + 5]);
+			gl.glVertex3f(coords[j + 6], coords[j + 7],  coords[j + 8]);
+			gl.glVertex3f(coords[j + 9], coords[j + 10], coords[j + 11]);
+			gl.glEnd();
+		}
+
+		if (enableLighting) {
+			endLighting(gl);
+		}
+
+		if (lineColor != null) {
+			gl.glLineWidth(lineWidth);
+			for (int i = 0; i < numQuads; i++) {
+				int j = i * 12;
+				gl.glBegin(GL.GL_LINE_STRIP);
+				setColor(gl, lineColor);
+				gl.glVertex3f(coords[j],     coords[j + 1],  coords[j + 2]);
+				gl.glVertex3f(coords[j + 3], coords[j + 4],  coords[j + 5]);
+				gl.glVertex3f(coords[j + 6], coords[j + 7],  coords[j + 8]);
+				gl.glVertex3f(coords[j + 9], coords[j + 10], coords[j + 11]);
+				gl.glVertex3f(coords[j],     coords[j + 1],  coords[j + 2]);
+				gl.glEnd();
+			}
+			gl.glLineWidth(1f);
+		}
+	}
+
+	/**
+	 * Compute a unit face normal for one quad in a packed coordinate array, via
+	 * the cross product of its first two edges.
+	 *
+	 * @param coords packed coordinate array
+	 * @param j      offset of the quad's first vertex (a multiple of 12)
+	 * @return a unit normal {@code [nx, ny, nz]}; {@code (0, 0, 1)} if the quad
+	 *         is degenerate (first two edges are parallel or zero-length)
+	 */
+	private static float[] quadFaceNormal(float[] coords, int j) {
+		float ax = coords[j + 3] - coords[j];
+		float ay = coords[j + 4] - coords[j + 1];
+		float az = coords[j + 5] - coords[j + 2];
+		float bx = coords[j + 6] - coords[j + 3];
+		float by = coords[j + 7] - coords[j + 4];
+		float bz = coords[j + 8] - coords[j + 5];
+
+		float nx = ay * bz - az * by;
+		float ny = az * bx - ax * bz;
+		float nz = ax * by - ay * bx;
+		float len = (float) Math.sqrt(nx * nx + ny * ny + nz * nz);
+		if (len < 1e-9f) {
+			return new float[] { 0f, 0f, 1f };
+		}
+		return new float[] { nx / len, ny / len, nz / len };
 	}
 
 	/**
@@ -1386,6 +1663,77 @@ public class Support3D {
 		gl.glRotatef(ax, rx, ry, 0f);
 		glu.gluCylinder(_quad, radius, radius, v, 50, 1);
 		gl.glPopMatrix();
+	}
+
+	/**
+	 * Draws an open-ended cylindrical tube between two points, with optional
+	 * Phong-style lighting.
+	 *
+	 * <p>Behaves exactly like {@link #drawTube} except that when
+	 * {@code enableLighting} is {@code true}, the shared GLU quadric is told to
+	 * generate smooth per-vertex normals ({@code GLU_SMOOTH}) via
+	 * {@code gluQuadricNormals}, and lighting/material state is applied around
+	 * the {@code gluCylinder} call the same way {@link #solidShadedSphere} does.
+	 * The quadric's normal mode is restored to {@code GLU_NONE} afterward so
+	 * unlit callers of {@link #drawTube} are unaffected.
+	 *
+	 * <p>No end caps are drawn, matching {@link #drawTube}.
+	 *
+	 * @param drawable       the OpenGL drawable
+	 * @param x1             x coordinate of the first endpoint
+	 * @param y1             y coordinate of the first endpoint
+	 * @param z1             z coordinate of the first endpoint
+	 * @param x2             x coordinate of the second endpoint
+	 * @param y2             y coordinate of the second endpoint
+	 * @param z2             z coordinate of the second endpoint
+	 * @param radius         tube radius
+	 * @param color          the tube colour; also used as the material diffuse
+	 *                       colour when lighting is enabled
+	 * @param enableLighting {@code true} to enable a directional GL_LIGHT0 and
+	 *                       Phong materials; {@code false} for flat colour
+	 */
+	public static void drawShadedTube(GLAutoDrawable drawable, float x1, float y1, float z1, float x2, float y2,
+			float z2, float radius, Color color, boolean enableLighting) {
+		GLU glu = getGLU();
+
+		if (_quad == null) {
+			_quad = glu.gluNewQuadric();
+		}
+
+		float vx = x2 - x1;
+		float vy = y2 - y1;
+		float vz = z2 - z1;
+		if (Math.abs(vz) < 1.0e-5) {
+			vz = 0.0001f;
+		}
+
+		float v  = (float) Math.sqrt(vx * vx + vy * vy + vz * vz);
+		float ax = (float) (57.2957795 * Math.acos(vz / v));
+		if (vz < 0.0) {
+			ax = -ax;
+		}
+		float rx = -vy * vz;
+		float ry = vx * vz;
+
+		GL2 gl = drawable.getGL().getGL2();
+
+		if (enableLighting) {
+			beginLighting(gl, color);
+			glu.gluQuadricNormals(_quad, GLU.GLU_SMOOTH);
+		} else {
+			setColor(gl, color);
+		}
+
+		gl.glPushMatrix();
+		gl.glTranslatef(x1, y1, z1);
+		gl.glRotatef(ax, rx, ry, 0f);
+		glu.gluCylinder(_quad, radius, radius, v, 50, 1);
+		gl.glPopMatrix();
+
+		if (enableLighting) {
+			glu.gluQuadricNormals(_quad, GLU.GLU_NONE);
+			endLighting(gl);
+		}
 	}
 
 	// -------------------------------------------------------------------------
