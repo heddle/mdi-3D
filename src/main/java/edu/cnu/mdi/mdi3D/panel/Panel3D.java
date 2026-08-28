@@ -4,7 +4,9 @@ import java.awt.BorderLayout;
 import java.util.Vector;
 
 import javax.swing.JComponent;
+import javax.swing.JLabel;
 import javax.swing.JPanel;
+import javax.swing.SwingConstants;
 
 import com.jogamp.opengl.GL;
 import com.jogamp.opengl.GL2;
@@ -21,7 +23,7 @@ import com.jogamp.opengl.fixedfunc.GLLightingFunc;
 import com.jogamp.opengl.fixedfunc.GLMatrixFunc;
 import com.jogamp.opengl.glu.GLU;
 
-import edu.cnu.mdi.mdi3D.adapter3D.KeyAdapter3D;
+import edu.cnu.mdi.dialog.DialogUtils;
 import edu.cnu.mdi.mdi3D.adapter3D.KeyBindings3D;
 import edu.cnu.mdi.mdi3D.adapter3D.MouseAdapter3D;
 import edu.cnu.mdi.mdi3D.item3D.Item3D;
@@ -82,7 +84,19 @@ public class Panel3D extends JPanel implements GLEventListener {
 
 	protected GLProfile glprofile;
 	protected GLCapabilities glcapabilities;
+
+	/**
+	 * The hosted OpenGL panel, or {@code null} if OpenGL could not be
+	 * initialized on this system (see {@link #isGLAvailable()}). Every method
+	 * in this class that touches {@code gljpanel} already null-checks it, so a
+	 * {@code null} value here degrades gracefully to a no-op rather than an
+	 * NPE.
+	 */
 	protected final GLJPanel gljpanel;
+
+	/** Set when {@link #gljpanel} is {@code null}: why OpenGL initialization failed. */
+	private final Throwable glInitError;
+
 	protected GLU glu; // glu utilities
 	
 	// Navigation step used by keyboard panning and mouse-wheel zoom.
@@ -107,9 +121,6 @@ public class Panel3D extends JPanel implements GLEventListener {
 
 	// listen for mouse events
 	protected MouseAdapter3D _mouseAdapter;
-
-	// listen for key events
-	protected KeyAdapter3D _keyAdapter;
 
 	protected String _rendererStr;
 
@@ -177,36 +188,64 @@ public class Panel3D extends JPanel implements GLEventListener {
 
 		setLayout(new BorderLayout(0, 0));
 
-		GLProfile glprofile;
-		if (GLProfile.isAvailable(GLProfile.GL2)) {
-			glprofile = GLProfile.get(GLProfile.GL2);
-		} else {
-			glprofile = GLProfile.getMaxFixedFunc(true);
+		// GL initialization can fail on a system with no usable OpenGL (a
+		// headless CI runner, a remote desktop session without GPU passthrough,
+		// a misconfigured or missing driver). Rather than let that propagate out
+		// of a view's constructor as a raw JOGL exception -- which previously
+		// crashed the whole view with a stack trace and no indication of what
+		// went wrong -- fall back to gljpanel == null and show an explanatory
+		// panel in its place. Every other method in this class that touches
+		// gljpanel already null-checks it (refresh, softRefresh,
+		// reinitGLContext), so this is the only place that needed to change.
+		GLJPanel panel;
+		Throwable initError;
+		try {
+			GLProfile profile;
+			if (GLProfile.isAvailable(GLProfile.GL2)) {
+				profile = GLProfile.get(GLProfile.GL2);
+			} else {
+				profile = GLProfile.getMaxFixedFunc(true);
+			}
+			glprofile = profile;
+
+			glcapabilities = new GLCapabilities(profile);
+			glcapabilities.setRedBits(8);
+			glcapabilities.setBlueBits(8);
+			glcapabilities.setGreenBits(8);
+			glcapabilities.setAlphaBits(8);
+			glcapabilities.setDepthBits(32);
+
+			panel = new GLJPanel(glcapabilities);
+			panel.addGLEventListener(this);
+			initError = null;
+		} catch (Throwable t) {
+			// Deliberately broad: JOGL/GlueGen can fail with GLException,
+			// UnsatisfiedLinkError, or other platform-specific throwables
+			// depending on what's missing, and every one of them should land
+			// here rather than abort view construction.
+			panel = null;
+			initError = t;
 		}
-
-		glcapabilities = new GLCapabilities(glprofile);
-		glcapabilities.setRedBits(8);
-		glcapabilities.setBlueBits(8);
-		glcapabilities.setGreenBits(8);
-		glcapabilities.setAlphaBits(8);
-		glcapabilities.setDepthBits(32);
-
-		gljpanel = new GLJPanel(glcapabilities);
-		gljpanel.addGLEventListener(this);
+		gljpanel = panel;
+		glInitError = initError;
 
 		safeAdd(addNorth(), BorderLayout.NORTH);
 		safeAdd(addSouth(), BorderLayout.SOUTH);
 		safeAdd(addEast(), BorderLayout.EAST);
 		safeAdd(addWest(), BorderLayout.WEST);
 
-		add(gljpanel, BorderLayout.CENTER);
+		if (gljpanel != null) {
+			add(gljpanel, BorderLayout.CENTER);
 
-		new KeyBindings3D(this);
+			new KeyBindings3D(this);
 
-		_mouseAdapter = new MouseAdapter3D(this);
-		gljpanel.addMouseListener(_mouseAdapter);
-		gljpanel.addMouseMotionListener(_mouseAdapter);
-		gljpanel.addMouseWheelListener(_mouseAdapter);
+			_mouseAdapter = new MouseAdapter3D(this);
+			gljpanel.addMouseListener(_mouseAdapter);
+			gljpanel.addMouseMotionListener(_mouseAdapter);
+			gljpanel.addMouseWheelListener(_mouseAdapter);
+		} else {
+			add(buildUnavailablePanel(glInitError), BorderLayout.CENTER);
+		}
 
 		// Set initial orientation using the same semantics as before:
 		// reset then apply rotateX/Y/Z in that order.
@@ -217,6 +256,42 @@ public class Panel3D extends JPanel implements GLEventListener {
 
 		createInitialItems();
 
+	}
+
+	/**
+	 * Whether OpenGL was successfully initialized for this panel.
+	 *
+	 * @return {@code true} if this panel has a working {@link GLJPanel};
+	 *         {@code false} if GL initialization failed and {@link #getGLJPanel()}
+	 *         returns {@code null}
+	 */
+	public boolean isGLAvailable() {
+		return gljpanel != null;
+	}
+
+	/**
+	 * The reason OpenGL initialization failed, if it did.
+	 *
+	 * @return the throwable caught during GL setup, or {@code null} if
+	 *         {@link #isGLAvailable()} is {@code true}
+	 */
+	public Throwable getGLInitError() {
+		return glInitError;
+	}
+
+	// Build the explanatory panel shown in place of the GLJPanel when OpenGL
+	// could not be initialized.
+	private static JComponent buildUnavailablePanel(Throwable cause) {
+		String reason = (cause == null) ? "unknown error" : cause.getClass().getSimpleName()
+				+ (cause.getMessage() != null ? ": " + cause.getMessage() : "");
+
+		JLabel label = new JLabel("<html><div style='text-align:center;'>"
+				+ "3D rendering is unavailable on this system.<br>"
+				+ "OpenGL could not be initialized.<br>"
+				+ "<font size='-1' color='gray'>" + reason + "</font></div></html>",
+				SwingConstants.CENTER);
+
+		return DialogUtils.paddedPanel(24, 24, label);
 	}
 
 	/**
