@@ -579,9 +579,14 @@ public class ScatterPlot3D extends Item3D {
         if (style == RenderStyle.POINTS) {
             drawPointSprites(drawable);
         } else {
-            // Draw each committed point as a solid sphere.
+            // Draw each committed point as a lit solid sphere, matching
+            // RenderStyle.SPHERES' own documented "lit solid sphere" behavior.
+            // This mode is only reachable below _autoPointThreshold (default
+            // 750), so the per-sphere lighting/material state changes stay
+            // cheap; larger point counts fall through to the batched,
+            // point-sprite RenderStyle.POINTS path above instead.
             for (ScatterPoint pt : _committedPoints) {
-                Support3D.solidSphere(drawable, pt.x, pt.y, pt.z, radius, slices, stacks, pt.color);
+                Support3D.solidShadedSphere(drawable, pt.x, pt.y, pt.z, radius, slices, stacks, pt.color, true);
             }
         }
 
