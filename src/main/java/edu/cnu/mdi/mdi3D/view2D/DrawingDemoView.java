@@ -5,6 +5,7 @@ import java.awt.Font;
 import java.awt.event.ComponentEvent;
 import java.awt.geom.Point2D;
 
+import edu.cnu.mdi.container.CreationSupport;
 import edu.cnu.mdi.item.TextItem;
 import edu.cnu.mdi.view.AbstractViewInfo;
 import edu.cnu.mdi.view.DrawingView;
@@ -29,9 +30,8 @@ public class DrawingDemoView extends DrawingView {
 
 	/** Text of the pre-placed explanatory item. */
 	private static final String EXPLANATION =
-			"This 2D view is included in the MDI-3D demo to emphasize\n"
-			+ "that 2D and 3D views can coexist in the same MDI\n"
-			+ "application.";
+			  "This 2D view is included in the MDI-3D demo to emphasize that\n"
+			+ "2D and 3D views can coexist within the same MDI application.";
 
 	/** Guards against adding the explanation item more than once. */
 	private boolean explanationAdded;
@@ -75,9 +75,9 @@ public class DrawingDemoView extends DrawingView {
 		explanationAdded = true;
 
 		Font font = new Font("SansSerif", Font.PLAIN, 14);
-		new TextItem(getAnnotationLayer(), new Point2D.Double(0.06, 0.55), font,
+		TextItem item = new TextItem(getAnnotationLayer(), new Point2D.Double(0.5, 0.55), font,
 				EXPLANATION, Color.darkGray, null, Color.black);
-
+		CreationSupport.defaultConfigureItem(item);
 		refresh();
 	}
 
