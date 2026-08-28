@@ -27,6 +27,7 @@ import edu.cnu.mdi.mdi3D.view3D.PlainView3D;
 import edu.cnu.mdi.ui.colors.ScientificColorMap;
 import edu.cnu.mdi.ui.fonts.Fonts;
 import edu.cnu.mdi.util.PropertyUtils;
+import edu.cnu.mdi.view.AbstractViewInfo;
 import edu.cnu.mdi.view.ViewPropertiesBuilder;
 
 /**
@@ -117,6 +118,11 @@ public class ScatterPlot3DDemo extends PlainView3D {
          * row clipped.
          */
         add(buildControlPanel(), BorderLayout.SOUTH);
+    }
+
+    @Override
+    public AbstractViewInfo getViewInfo() {
+        return new ScatterPlot3DDemoInfo();
     }
 
     /**

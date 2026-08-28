@@ -20,6 +20,7 @@ import edu.cnu.mdi.mdi3D.view3D.PlainView3D;
 import edu.cnu.mdi.ui.fonts.Fonts;
 import edu.cnu.mdi.util.Environment;
 import edu.cnu.mdi.util.PropertyUtils;
+import edu.cnu.mdi.view.AbstractViewInfo;
 import edu.cnu.mdi.view.ViewConfiguration;
 import edu.cnu.mdi.view.ViewPropertiesBuilder;
 import edu.cnu.mdi.view.VirtualView;
@@ -121,6 +122,11 @@ public class GlobeView3D extends PlainView3D {
 	 */
 	public static ViewConfiguration<GlobeView3D> getConfiguration() {
 		return ViewConfiguration.lazy(TITLE, GlobeView3D::new, 1, 0, 0, VirtualView.CENTER);
+	}
+
+	@Override
+	public AbstractViewInfo getViewInfo() {
+		return new GlobeView3DInfo();
 	}
 
 	/**

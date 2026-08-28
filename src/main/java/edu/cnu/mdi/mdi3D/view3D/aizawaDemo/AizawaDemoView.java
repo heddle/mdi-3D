@@ -15,6 +15,7 @@ import edu.cnu.mdi.sim.SimulationState;
 import edu.cnu.mdi.sim.ui.IconSimulationControlPanel;
 import edu.cnu.mdi.sim.ui.StandardSimIcons;
 import edu.cnu.mdi.util.PropertyUtils;
+import edu.cnu.mdi.view.AbstractViewInfo;
 import edu.cnu.mdi.view.ViewConfiguration;
 import edu.cnu.mdi.view.ViewPropertiesBuilder;
 import edu.cnu.mdi.view.VirtualView;
@@ -131,6 +132,11 @@ public class AizawaDemoView extends SimulationView3D {
 	 */
 	public static ViewConfiguration<AizawaDemoView> getConfiguration() {
 		return ViewConfiguration.lazy(TITLE, AizawaDemoView::new, 2, 0, 0, VirtualView.CENTER);
+	}
+
+	@Override
+	public AbstractViewInfo getViewInfo() {
+		return new AizawaDemoViewInfo();
 	}
 
 	// Create the simulation with default model parameters.
