@@ -9,6 +9,7 @@ import com.jogamp.opengl.GLAutoDrawable;
 import edu.cnu.mdi.mdi3D.item3D.Quad3D;
 import edu.cnu.mdi.mdi3D.panel.Panel3D;
 import edu.cnu.mdi.mdi3D.panel.TextRendering3D;
+import edu.cnu.mdi.mdi3D.panel.Vector3f;
 import edu.cnu.mdi.mdi3D.view3D.SimulationView3D;
 import edu.cnu.mdi.sim.SimulationContext;
 import edu.cnu.mdi.sim.SimulationEngineConfig;
@@ -34,10 +35,11 @@ import edu.cnu.mdi.view.VirtualView;
  * <p>
  * Architecturally this is the simplest possible {@link SimulationView3D}: the
  * simulation thread has no numerical model to integrate, so {@link
- * LogoSimulation#step} does nothing but advance a rotation angle at a
- * self-paced rate. All scene mutation — the single {@code rotateY} call per
- * frame — happens in {@link #onSimulationRefresh}, on the EDT, exactly like
- * the Aizawa and Kinetics demos.
+ * LogoSimulation#step} does nothing but advance an animation angle at a
+ * self-paced rate. All scene mutation happens in {@link #onSimulationRefresh},
+ * on the EDT, exactly like the Aizawa and Kinetics demos. The view uses that
+ * angle to rotate about a slowly precessing axis, giving the lit pane normals
+ * a much richer set of orientations than a simple turntable spin.
  * </p>
  */
 @SuppressWarnings("serial")
@@ -76,6 +78,21 @@ public class LogoDemoView extends SimulationView3D {
 	/** Style used to draw the fixed "MDI" screen-space caption. */
 	private static final TextRendering3D.Style LABEL_STYLE =
 			new TextRendering3D.Style(new Color(20, 45, 80), new Color(255, 255, 255, 220), 2, true, false);
+
+	/** X amplitude of the slowly precessing rotation axis. */
+	private static final float AXIS_X_AMPLITUDE = 0.45f;
+
+	/** Z amplitude of the slowly precessing rotation axis. */
+	private static final float AXIS_Z_AMPLITUDE = 0.32f;
+
+	/** Relative phase rate for the x component of the rotation axis. */
+	private static final float AXIS_X_PHASE_RATE = 0.61f;
+
+	/** Relative phase rate for the z component of the rotation axis. */
+	private static final float AXIS_Z_PHASE_RATE = 0.37f;
+
+	/** Animation phase, in degrees, used to precess the automatic rotation axis. */
+	private float rotationPhaseDeg;
 
 	/**
 	 * Construct the logo demo view using its canonical default properties.
@@ -155,9 +172,15 @@ public class LogoDemoView extends SimulationView3D {
 			public void createInitialItems() {
 				setNavigationStepFromExtent(SCENE_EXTENT);
 
-				addItem(panel(this, -70f, 70f, -70f, 85f, PANEL_BACK));
-				addItem(panel(this, -15f, 15f, -25f, 95f, PANEL_MID));
-				addItem(panel(this, 45f, -45f, 25f, 110f, PANEL_FRONT));
+				/*
+				 * Give the three panes slightly different surface normals. The offsets
+				 * are deliberately small: the group should still read immediately as
+				 * the MDI stacked-window mark, while the different normals make the
+				 * lighting response visibly independent on each pane.
+				 */
+				addItem(panel(this, -70f,  70f, -70f,  85f, -5f,  4f, PANEL_BACK));
+				addItem(panel(this, -15f,  15f, -25f,  95f,  4f, -3f, PANEL_MID));
+				addItem(panel(this,  45f, -45f,  25f, 110f, -3f,  5f, PANEL_FRONT));
 			}
 
 			@Override
@@ -187,16 +210,86 @@ public class LogoDemoView extends SimulationView3D {
 		};
 	}
 
-	// Build one lit, framed, square Quad3D panel centered at (cx, cy, cz).
-	private static Quad3D panel(Panel3D p, float cx, float cy, float cz, float half, Color color) {
-		Quad3D q = new Quad3D(p,
-				cx - half, cy - half, cz,
-				cx + half, cy - half, cz,
-				cx + half, cy + half, cz,
-				cx - half, cy + half, cz,
-				color, 2.5f, true);
+	/**
+	 * Build one lit, framed square panel centered at {@code (cx, cy, cz)}.
+	 *
+	 * <p>
+	 * The square is constructed in its local xy plane and then given small
+	 * rotations about its local x and y axes. This lets different panes have
+	 * slightly different surface normals while preserving the stacked-window
+	 * appearance of the MDI mark.
+	 * </p>
+	 *
+	 * @param p owner panel
+	 * @param cx center x coordinate
+	 * @param cy center y coordinate
+	 * @param cz center z coordinate
+	 * @param half half-width and half-height of the square
+	 * @param tiltXDeg local x-axis tilt, in degrees
+	 * @param tiltYDeg local y-axis tilt, in degrees
+	 * @param color panel color
+	 * @return the configured lit quad
+	 */
+	private static Quad3D panel(Panel3D p,
+			float cx, float cy, float cz,
+			float half,
+			float tiltXDeg, float tiltYDeg,
+			Color color) {
+
+		float[] coords = {
+				-half, -half, 0f,
+				 half, -half, 0f,
+				 half,  half, 0f,
+				-half,  half, 0f
+		};
+
+		rotateAndTranslate(coords, cx, cy, cz, tiltXDeg, tiltYDeg);
+
+		Quad3D q = new Quad3D(p, coords, color, 2.5f, true);
 		q.setLighted(true);
 		return q;
+	}
+
+	/**
+	 * Rotate local quad coordinates first about x and then about y, and finally
+	 * translate them to their scene position.
+	 *
+	 * @param coords xyz triples to transform in place
+	 * @param cx destination center x
+	 * @param cy destination center y
+	 * @param cz destination center z
+	 * @param tiltXDeg x-axis rotation in degrees
+	 * @param tiltYDeg y-axis rotation in degrees
+	 */
+	private static void rotateAndTranslate(float[] coords,
+			float cx, float cy, float cz,
+			float tiltXDeg, float tiltYDeg) {
+
+		double ax = Math.toRadians(tiltXDeg);
+		double ay = Math.toRadians(tiltYDeg);
+
+		float cosX = (float) Math.cos(ax);
+		float sinX = (float) Math.sin(ax);
+		float cosY = (float) Math.cos(ay);
+		float sinY = (float) Math.sin(ay);
+
+		for (int i = 0; i < coords.length; i += 3) {
+			float x = coords[i];
+			float y = coords[i + 1];
+			float z = coords[i + 2];
+
+			// Rotate about local x.
+			float yx = y * cosX - z * sinX;
+			float zx = y * sinX + z * cosX;
+
+			// Then rotate about local y.
+			float xy = x * cosY + zx * sinY;
+			float zy = -x * sinY + zx * cosY;
+
+			coords[i] = xy + cx;
+			coords[i + 1] = yx + cy;
+			coords[i + 2] = zy + cz;
+		}
 	}
 
 	/**
@@ -216,9 +309,28 @@ public class LogoDemoView extends SimulationView3D {
 	@Override
 	protected void onSimulationRefresh(SimulationContext ctx) {
 		float delta = getSimulation().takePendingDelta();
-		if (delta != 0f) {
-			_panel3D.rotateY(delta);
+		if (delta == 0f) {
+			return;
 		}
+
+		/*
+		 * A fixed combination of X/Y/Z increments is still, to a very good
+		 * approximation, just rotation about one fixed compound axis. For a
+		 * lighting demo that can leave the panes in long stretches of rather
+		 * similar illumination. Instead, slowly precess the rotation axis itself.
+		 * Y remains dominant so the motion still reads as a graceful spin, while
+		 * the smaller X and Z components continually change the pane normals
+		 * presented to the fixed light.
+		 */
+		rotationPhaseDeg += delta;
+		float phase = (float) Math.toRadians(rotationPhaseDeg);
+
+		float ax = AXIS_X_AMPLITUDE * (float) Math.sin(AXIS_X_PHASE_RATE * phase);
+		float ay = 1f;
+		float az = AXIS_Z_AMPLITUDE * (float) Math.cos(AXIS_Z_PHASE_RATE * phase);
+
+		Vector3f axis = new Vector3f(ax, ay, az);
+		_panel3D.rotate(axis, (float) Math.toRadians(delta));
 	}
 
 	// ---------------------------------------------------------------------

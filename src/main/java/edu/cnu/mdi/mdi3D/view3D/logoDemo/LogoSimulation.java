@@ -28,13 +28,13 @@ public class LogoSimulation implements Simulation {
 	/** Default safety cap on the number of steps (about 4.6 hours at the default rate). */
 	public static final int DEFAULT_MAX_STEPS = 1_000_000;
 
-	/** Default degrees advanced per step. */
+	/** Default animation-angle increment, in degrees, advanced per step. */
 	public static final float DEFAULT_DEGREES_PER_STEP = 0.6f;
 
 	/** Default self-paced delay between steps, in milliseconds. */
 	public static final long DEFAULT_STEP_SLEEP_MS = 16L;
 
-	/** Degrees the logo advances (about its own Y axis) on each step. */
+	/** Animation-angle increment, in degrees, advanced on each step. */
 	private final float degreesPerStep;
 
 	/** Self-paced delay at the start of each step, in milliseconds. */
@@ -65,7 +65,7 @@ public class LogoSimulation implements Simulation {
 	/**
 	 * Construct the logo-spin simulation with an explicit rate.
 	 *
-	 * @param degreesPerStep degrees to rotate per step (about the Y axis)
+	 * @param degreesPerStep animation-angle increment, in degrees, per step
 	 * @param stepSleepMs    milliseconds to sleep at the start of each step, so
 	 *                       the simulation thread self-paces instead of
 	 *                       busy-spinning
@@ -94,7 +94,7 @@ public class LogoSimulation implements Simulation {
 	}
 
 	/**
-	 * Take the rotation accumulated since the last call and reset the
+	 * Take the animation-angle increment accumulated since the last call and reset the
 	 * accumulator to zero.
 	 * <p>
 	 * Intended to be called only from an EDT-marshaled {@code onSimulationRefresh}
@@ -103,7 +103,7 @@ public class LogoSimulation implements Simulation {
 	 * (partially-added) accumulation.
 	 * </p>
 	 *
-	 * @return the accumulated rotation, in degrees, since the previous call
+	 * @return the accumulated animation-angle increment, in degrees, since the previous call
 	 */
 	public float takePendingDelta() {
 		synchronized (lock) {

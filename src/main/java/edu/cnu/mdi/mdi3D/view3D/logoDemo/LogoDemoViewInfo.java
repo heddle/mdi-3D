@@ -19,48 +19,48 @@ public class LogoDemoViewInfo extends AbstractViewInfo {
 		return """
 				The MDI logo is three overlapping rectangular "window" panes.
 				This view recreates that motif directly in 3D as three lit
-				Quad3D panels, arranged like stacked cards and rotated together.
+				Quad3D panels arranged like stacked cards and rotated together.
 
-				Its purpose is to exercise MDI-3D's optional Phong lighting path
-				(also available on Sphere, Cube, and Cylinder). As the group
-				turns, each panel's brightness sweeps from lit to grazing to
-				shadowed and back — a flat, unlit scene cannot show that, which
-				is exactly the point of this demo.
+				Its purpose is to demonstrate MDI-3D's optional lighting path,
+				which is also available for Sphere, Cube, and Cylinder. The
+				panes have slightly different surface normals, so their
+				brightness and highlights change independently as the mark
+				rotates. That makes the effect of surface orientation on
+				lighting especially easy to see.
 				""";
 	}
 
 	@Override
 	public List<String> getUsageBullets() {
 		return List.of(
-				"Press Start, then Run, to begin the rotation (or just watch — auto-run is on by default).",
-				"Drag to add your own rotation on top of the automatic spin; it composes naturally.",
-				"Watch the panels brighten and dim together as they turn — that is the lighting, not a color change.",
-				"Pause/Resume/Stop behave exactly as in any other MDI simulation, even though there is no physics "
-						+ "to pause."
+				"Use the simulation controls to run, pause, resume, or stop the automatic rotation.",
+				"Drag with the mouse to add your own rotation on top of the automatic spin.",
+				"Watch the three panes brighten and dim somewhat differently as their surface normals turn relative to the light.",
+				"Use Image > Save/Copy Image... to save the rendered view or copy it directly to the clipboard."
 		);
 	}
 
 	@Override
 	public String getTechnicalNotes() {
 		return """
-				This is the simplest possible SimulationEngine-driven MDI-3D
-				view: LogoSimulation has no numerical model at all. Each step
-				self-paces with a short sleep (there is no computation to
-				naturally rate-limit it) and advances a rotation angle by a fixed
-				increment. LogoDemoView applies that increment to the panel with
-				a single rotateY call inside its EDT-marshaled onSimulationRefresh
-				hook — the same split every other simulation-driven demo in this
-				package follows.
+				This is the simplest SimulationEngine-driven MDI-3D view:
+				LogoSimulation has no numerical model to integrate. Each step
+				self-paces with a short sleep and accumulates a small rotation
+				increment. LogoDemoView applies that increment with a rotateY
+				call inside its EDT-marshaled onSimulationRefresh hook.
 
-				The three panels all share one local surface normal, so they
-				shade in perfect sync rather than independently; that is a
-				deliberate simplification, not a bug.
+				Lighting is opt-in on the Quad3D items. Each pane is given a
+				small fixed local tilt, producing a slightly different surface
+				normal while preserving the overall stacked-window appearance.
+				The light remains fixed while the scene rotates, so the changing
+				shading comes from the orientation of each surface rather than
+				from changing its base color.
 				""";
 	}
 
 	@Override
 	public String getFooter() {
-		return "MDI-3D demo: Phong lighting on a recreation of the MDI mark.";
+		return "MDI-3D demo: lighting on a recreation of the MDI mark.";
 	}
 
 	@Override
