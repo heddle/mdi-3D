@@ -10,7 +10,6 @@ import javax.swing.JLabel;
 import javax.swing.JPanel;
 import javax.swing.JSlider;
 import javax.swing.SwingConstants;
-import javax.swing.SwingUtilities;
 import javax.swing.event.ChangeEvent;
 
 import edu.cnu.mdi.geometry.Line;
@@ -126,11 +125,6 @@ public class GeometrySlice3DView extends PlainView3D {
         doLayout();
         validate();
 
-        // The Panel3D constructor calls createInitialItems() before this view's
-        // fields have finished initializing. The panel schedules the first
-        // rebuild for later, but this second call is harmless and makes the
-        // startup path explicit.
-        SwingUtilities.invokeLater(this::rebuildScene);
     }
 
     /**
@@ -195,11 +189,9 @@ public class GeometrySlice3DView extends PlainView3D {
      * Create the hosted 3D panel.
      *
      * <p>
-     * {@link Panel3D} invokes {@code createInitialItems()} from its own
-     * constructor. Because this occurs during the superclass constructor call,
-     * the outer {@code GeometrySlice3DView} has not finished field
-     * initialization yet. For that reason the initial scene rebuild is deferred
-     * with {@link SwingUtilities#invokeLater(Runnable)}.
+     * Initial scene creation occurs when the panel's first OpenGL context is
+     * initialized. By that time construction of this view has completed, so the
+     * shared geometry model and other instance state are available normally.
      * </p>
      */
     @Override
@@ -214,10 +206,10 @@ public class GeometrySlice3DView extends PlainView3D {
 
             @Override
             public void createInitialItems() {
-                SwingUtilities.invokeLater(GeometrySlice3DView.this::rebuildScene);
+                populateScene(this);
             }
         };
-        
+
         panel.setNavigationStepFromExtent(NAVIGATION_EXTENT);
 
         scenePanel = panel;
@@ -286,13 +278,21 @@ public class GeometrySlice3DView extends PlainView3D {
         }
 
         scenePanel.clearItems();
-
-        addAxes(scenePanel);
-        addShellWireframes(scenePanel);
-        addWires(scenePanel);
-        addSlicePlane(scenePanel, phiDeg);
-
+        populateScene(scenePanel);
         scenePanel.softRefresh();
+    }
+
+    /**
+     * Populate a panel with the geometry corresponding to the current slice
+     * angle.
+     *
+     * @param panel panel receiving the scene items
+     */
+    private void populateScene(Panel3D panel) {
+        addAxes(panel);
+        addShellWireframes(panel);
+        addWires(panel);
+        addSlicePlane(panel, phiDeg);
     }
 
     /**

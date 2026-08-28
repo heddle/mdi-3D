@@ -17,7 +17,6 @@ import javax.swing.JComboBox;
 import javax.swing.JLabel;
 import javax.swing.JPanel;
 import javax.swing.JSlider;
-import javax.swing.SwingUtilities;
 import javax.swing.Timer;
 
 import edu.cnu.mdi.mdi3D.item3D.ScatterPlot3D;
@@ -200,18 +199,10 @@ public class ScatterPlot3DDemo extends PlainView3D {
                 _scatter.setAxisTickCount(4);
                 _scatter.setShowAxisText(true);
 
-                /*
-                 * Panel3D currently calls createInitialItems() from its
-                 * constructor. At that point ScatterPlot3DDemo field
-                 * initializers may not yet have run, so defer loading the
-                 * sample data until construction of the enclosing view has
-                 * completed.
-                 */
-                SwingUtilities.invokeLater(() -> {
-                    if (_scatter != null) {
-                        loadSurfaceData();
-                    }
-                });
+                // Panel3D creates initial items only after view construction is
+                // complete, so the deterministic starter data can be loaded
+                // immediately.
+                loadSurfaceData();
             }
         };
     }

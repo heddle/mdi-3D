@@ -119,6 +119,17 @@ public class Panel3D extends JPanel implements GLEventListener {
 	// the list of 3D items to be drawn
 	protected Vector<Item3D> _itemList = new Vector<>();
 
+	/**
+	 * True after {@link #createInitialItems()} has been invoked for this panel.
+	 *
+	 * <p>
+	 * Initial items are created when the first OpenGL context is initialized,
+	 * rather than from the constructor. This avoids invoking an overridable
+	 * method while a subclass is only partially constructed.
+	 * </p>
+	 */
+	private boolean _initialItemsCreated;
+
 	// listen for mouse events
 	protected MouseAdapter3D _mouseAdapter;
 
@@ -157,8 +168,9 @@ public class Panel3D extends JPanel implements GLEventListener {
 	 * The constructor creates the {@link GLJPanel}, registers this object as the
 	 * {@link GLEventListener}, installs the MDI-3D keyboard and mouse adapters,
 	 * and creates any optional border components returned by the directional hook
-	 * methods. The initial scene contents are then created by calling
-	 * {@link #createInitialItems()}.
+	 * methods. Initial scene contents are created later, when the first OpenGL
+	 * context is initialized, by calling {@link #createInitialItems()}. Deferring
+	 * scene creation avoids invoking an overridable method from this constructor.
 	 * </p>
 	 *
 	 * @param angleX initial rotation angle about the x axis, in degrees
@@ -247,14 +259,13 @@ public class Panel3D extends JPanel implements GLEventListener {
 			add(buildUnavailablePanel(glInitError), BorderLayout.CENTER);
 		}
 
-		// Set initial orientation using the same semantics as before:
-		// reset then apply rotateX/Y/Z in that order.
+		// Establish the initial orientation without requesting intermediate
+		// refreshes. In particular, do not invoke any overridable scene-building
+		// methods while subclasses are still under construction.
 		loadIdentityMatrix();
-		rotateX(angleX);
-		rotateY(angleY);
-		rotateZ(angleZ);
-
-		createInitialItems();
+		rotateXInternal(angleX);
+		rotateYInternal(angleY);
+		rotateZInternal(angleZ);
 
 	}
 
@@ -300,8 +311,20 @@ public class Panel3D extends JPanel implements GLEventListener {
 	 * <p>
 	 * The default implementation is empty. Subclasses normally override this
 	 * method to populate the panel with axes, lines, surfaces, point clouds, or
-	 * other {@link Item3D} objects. This method is called by the constructor after
-	 * the OpenGL panel and input adapters have been created.
+	 * other {@link Item3D} objects.
+	 * </p>
+	 *
+	 * <p>
+	 * The method is invoked once, when the panel's first OpenGL context has been
+	 * initialized. It is deliberately not called from the {@code Panel3D}
+	 * constructor because subclasses may depend on fields that are not initialized
+	 * until after the superclass constructor has returned.
+	 * </p>
+	 *
+	 * <p>
+	 * A later OpenGL-context recreation does not rebuild the logical item list.
+	 * Individual items that own OpenGL resources are responsible for recreating
+	 * those resources as necessary.
 	 * </p>
 	 */
 	public void createInitialItems() {
@@ -453,6 +476,16 @@ public class Panel3D extends JPanel implements GLEventListener {
 	 * @param angleDeg rotation angle, in degrees
 	 */
 	public void rotateX(float angleDeg) {
+		rotateXInternal(angleDeg);
+		refresh();
+	}
+
+	/**
+	 * Apply an x-axis rotation without requesting a refresh.
+	 *
+	 * @param angleDeg rotation angle, in degrees
+	 */
+	private void rotateXInternal(float angleDeg) {
 		float rad = (float) Math.toRadians(angleDeg);
 		Quat dq = Quat.fromAxisAngle(1f, 0f, 0f, rad);
 
@@ -460,8 +493,6 @@ public class Panel3D extends JPanel implements GLEventListener {
 			_orientation.set(dq.mul(_orientation));
 			_orientation.normalizeInPlace();
 		}
-
-		refresh();
 	}
 
 	/**
@@ -470,6 +501,16 @@ public class Panel3D extends JPanel implements GLEventListener {
 	 * @param angleDeg rotation angle, in degrees
 	 */
 	public void rotateY(float angleDeg) {
+		rotateYInternal(angleDeg);
+		refresh();
+	}
+
+	/**
+	 * Apply a y-axis rotation without requesting a refresh.
+	 *
+	 * @param angleDeg rotation angle, in degrees
+	 */
+	private void rotateYInternal(float angleDeg) {
 		float rad = (float) Math.toRadians(angleDeg);
 		Quat dq = Quat.fromAxisAngle(0f, 1f, 0f, rad);
 
@@ -477,8 +518,6 @@ public class Panel3D extends JPanel implements GLEventListener {
 			_orientation.set(dq.mul(_orientation));
 			_orientation.normalizeInPlace();
 		}
-
-		refresh();
 	}
 
 	/**
@@ -487,6 +526,16 @@ public class Panel3D extends JPanel implements GLEventListener {
 	 * @param angleDeg rotation angle, in degrees
 	 */
 	public void rotateZ(float angleDeg) {
+		rotateZInternal(angleDeg);
+		refresh();
+	}
+
+	/**
+	 * Apply a z-axis rotation without requesting a refresh.
+	 *
+	 * @param angleDeg rotation angle, in degrees
+	 */
+	private void rotateZInternal(float angleDeg) {
 		float rad = (float) Math.toRadians(angleDeg);
 		Quat dq = Quat.fromAxisAngle(0f, 0f, 1f, rad);
 
@@ -494,8 +543,6 @@ public class Panel3D extends JPanel implements GLEventListener {
 			_orientation.set(dq.mul(_orientation));
 			_orientation.normalizeInPlace();
 		}
-
-		refresh();
 	}
 
 	/**
@@ -669,6 +716,18 @@ public class Panel3D extends JPanel implements GLEventListener {
 		gl.glHint(GL.GL_LINE_SMOOTH_HINT, GL.GL_DONT_CARE);
 
 		gl.glEnable(GL3.GL_PROGRAM_POINT_SIZE);
+
+
+		/*
+		 * Build the logical scene only after the Panel3D and its enclosing view have
+		 * completed construction and a usable GL context exists. JOGL may invoke
+		 * init() again if the context is recreated, so guard against duplicating the
+		 * scene.
+		 */
+		if (!_initialItemsCreated) {
+			_initialItemsCreated = true;
+			createInitialItems();
+		}
 	}
 
 	/**
