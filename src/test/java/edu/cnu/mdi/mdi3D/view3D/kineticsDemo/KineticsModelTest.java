@@ -1,7 +1,6 @@
 package edu.cnu.mdi.mdi3D.view3D.kineticsDemo;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import org.junit.jupiter.api.Test;
@@ -65,12 +64,6 @@ class KineticsModelTest {
 
 	@Test
 	void resetWithTheSameParticleCountConfinesToTheNewSubVolume() {
-		// Use the same particle count and length as the constructor: reset()'s
-		// coordinate buffers are allocated once, at the *constructor's* count,
-		// and are final (see resetWithALargerParticleCountThrows below), and
-		// reset()'s length parameter only sizes the initial confinement
-		// sub-region, not the elastic-wall bounding box used by update() (see
-		// the "Known limitation" note on reset()'s javadoc).
 		float length = 1.0f;
 		int count = 10;
 		KineticsModel model = new KineticsModel(count, length, 0.25f, 0.01f);
@@ -89,42 +82,48 @@ class KineticsModelTest {
 	}
 
 	@Test
-	void resetWithALargerParticleCountThrows() {
-		// KNOWN BUG, pinned here rather than silently worked around: the
-		// double-buffered coordinate arrays are allocated once in the
-		// constructor at `count * 3` and are final. reset(count, ...) accepts
-		// a new count and repopulates internalState with that many particles,
-		// but can never resize the buffers. A reset() to a larger count
-		// overflows them. If this starts passing, the buffer-resize was fixed
-		// — replace this test with one asserting the new count is honored.
+	void resetWithALargerParticleCountReallocatesTheBuffersInsteadOfOverflowing() {
 		KineticsModel model = new KineticsModel(10, 1.0f, 0.25f, 0.01f);
-		assertThrows(ArrayIndexOutOfBoundsException.class,
-				() -> model.reset(64, 1.0f, 0.25f, 0.01f));
+
+		int largerCount = 64;
+		model.reset(largerCount, 1.0f, 0.25f, 0.01f);
+
+		assertEquals(largerCount, model.size());
+		assertEquals(3 * largerCount, model.getSnapshot().coords().length);
 	}
 
 	@Test
-	void resetLengthParameterDoesNotResizeTheElasticWallBoundingBox() {
-		// Documents the known limitation on KineticsModel.reset(): the wall
-		// bounding box is fixed at construction time and is NOT updated by a
-		// later reset() call, even though reset() also takes a "length"
-		// parameter. If this ever starts failing, either the limitation was
-		// fixed (great — update the javadoc and this test) or a regression
-		// reintroduced box/seed inconsistency the other way.
-		float constructedLength = 1.0f;
-		KineticsModel model = new KineticsModel(30, constructedLength, 0.25f, 1.0f);
+	void resetWithASmallerParticleCountLeavesNoStaleTrailingCoordinates() {
+		KineticsModel model = new KineticsModel(64, 1.0f, 0.25f, 0.01f);
 
-		float largerResetLength = 5.0f;
-		model.reset(30, largerResetLength, 1.0f, 1.0f);
+		int smallerCount = 10;
+		model.reset(smallerCount, 1.0f, 0.25f, 0.01f);
+
+		assertEquals(smallerCount, model.size());
+		assertEquals(3 * smallerCount, model.getSnapshot().coords().length,
+				"the snapshot buffer must shrink to the new count, not retain the old (larger) size");
+	}
+
+	@Test
+	void resetWithANewLengthBecomesTheElasticWallBoundingBoxForSubsequentUpdates() {
+		KineticsModel model = new KineticsModel(30, 1.0f, 0.25f, 1.0f);
+
+		float newLength = 5.0f;
+		model.reset(30, newLength, 1.0f, 1.0f);
 
 		for (int i = 0; i < 500; i++) {
 			model.update();
 		}
 
 		float[] coords = model.getSnapshot().coords();
+		boolean sawCoordinateBeyondTheOldBox = false;
 		for (float c : coords) {
-			assertTrue(c >= 0f && c <= constructedLength,
-					"particles remain bounded by the constructor's length ("
-							+ constructedLength + "), not reset()'s length (" + largerResetLength + ")");
+			assertTrue(c >= 0f && c <= newLength,
+					"coordinate " + c + " escaped the new elastic-wall bounding box [0, " + newLength + "]");
+			sawCoordinateBeyondTheOldBox |= c > 1.0f;
 		}
+		assertTrue(sawCoordinateBeyondTheOldBox,
+				"expected at least one particle to have moved beyond the old box's length (1.0) "
+						+ "into the new, larger box - otherwise this test can't tell reset() apart from a no-op");
 	}
 }

@@ -27,11 +27,18 @@ public class KineticsModel {
 	// The public snapshot only exposes positions (raw coords), which is all the GUI needs.
 
 	private final List<PhysicsParticle> internalState = new ArrayList<>();
-	private final float length; // side length of bounding cube
 
-	// Double buffers for coordinates (packed x,y,z)
-	private final float[] bufferA;
-	private final float[] bufferB;
+	// Side length of the bounding cube used by update()'s elastic walls and by
+	// computeEntropy()'s occupancy histogram. Reassigned (not just read) by
+	// reset(), which is why this cannot be final.
+	private float length;
+
+	// Double buffers for coordinates (packed x,y,z). Reallocated by reset()
+	// when the particle count changes, which is why these cannot be final.
+	// Neither reset() nor update() is synchronized against the other; callers
+	// must not call reset() concurrently with update() on another thread.
+	private float[] bufferA;
+	private float[] bufferB;
 	private volatile float[] frontBuffer;
 	private volatile float[] backBuffer;
 
@@ -281,29 +288,23 @@ public class KineticsModel {
 	 * velocities corresponding to {@code initialTemp}.
 	 * </p>
 	 * <p>
-	 * <b>Known limitations:</b>
+	 * Unlike the constructor, {@code count} and {@code length} here need not
+	 * match the values originally passed to the constructor: the coordinate
+	 * buffers are reallocated to the new {@code count}, and the new
+	 * {@code length} becomes the elastic-wall bounding box used by
+	 * {@link #update()} and the occupancy histogram used by
+	 * {@link #computeEntropy()}, exactly as if a new {@code KineticsModel} had
+	 * been constructed.
 	 * </p>
-	 * <ul>
-	 * <li>{@code length} here only sizes this initial confined sub-region. It
-	 * does <em>not</em> resize the elastic-wall bounding box used by
-	 * {@link #update()}, which remains the {@code length} originally passed to
-	 * the constructor ({@link #length} is {@code final}). Calling
-	 * {@code reset} with a {@code length} different from the constructor's
-	 * will seed particles relative to one box size while {@link #update()}
-	 * continues to bounce them off the walls of another.</li>
-	 * <li>{@code count} must equal the count originally passed to the
-	 * constructor. The double-buffered coordinate arrays are allocated once,
-	 * at construction, at {@code count * 3} floats, and cannot be resized. A
-	 * larger {@code count} throws {@link ArrayIndexOutOfBoundsException}; a
-	 * smaller one leaves stale trailing coordinates in the snapshot buffer.</li>
-	 * </ul>
+	 * <p>
+	 * Must not be called concurrently with {@link #update()} from another
+	 * thread; neither method synchronizes against the other.
+	 * </p>
 	 *
-	 * @param count           number of particles to create; must equal the
-	 *                        count originally passed to the constructor (see
-	 *                        the known limitations above)
-	 * @param length          side length of the cube that the initial
-	 *                        sub-region is computed relative to; see the
-	 *                        known limitation above
+	 * @param count           number of particles to create
+	 * @param length          new side length of the bounding cube, used both
+	 *                        for the initial confined sub-region and as the
+	 *                        elastic-wall box for subsequent updates
 	 * @param volumeFraction  fraction of {@code length} defining the initial
 	 *                        confined sub-region, in {@code (0, 1]}
 	 * @param initialTemp     initial temperature, used to set the standard
@@ -313,6 +314,11 @@ public class KineticsModel {
 		internalState.clear();
 		this.temperature = initialTemp;
 		this.time = 0f;
+		this.length = length;
+		this.bufferA = new float[count * 3];
+		this.bufferB = new float[count * 3];
+		this.frontBuffer = bufferA;
+		this.backBuffer = bufferB;
 
 		Random rnd = new Random();
 		float subBound = length * volumeFraction;
