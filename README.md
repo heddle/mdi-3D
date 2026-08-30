@@ -21,7 +21,7 @@ around, so applications that don't need 3D never pull it in.
   and wires a `Panel3D` to an `edu.cnu.mdi.sim.SimulationEngine` for time-evolving scenes, reusing
   the base package's full simulation lifecycle (run/pause/resume/stop/cancel) and standard control
   panels.
-- **Six demo views**, registered together in `DemoApp3D`:
+- **Seven demo views**, registered together in `DemoApp3D`:
 
   | Demo | Package | Drives its updates via |
   |---|---|---|
@@ -31,6 +31,11 @@ around, so applications that don't need 3D never pull it in.
   | 3D scatter plot | `view3D.scatterDemo` | background data feed + interactive |
   | Geometry slice | `view3D.geoslice` | a slider (`PlainView3D`, no time evolution) |
   | Interactive globe | `view3D.globe` | mouse only (`PlainView3D`, no time evolution) |
+  | 2D drawing view | `view2D` | mouse only (ordinary 2D `DrawingView`, no 3D at all) |
+
+  The last one is deliberate: it's a plain 2D MDI view sitting in the same virtual desktop as the
+  six 3D ones, to demonstrate that ordinary 2D and 3D views coexist in one MDI application without
+  any special-casing.
 
 ## Requirements
 
@@ -63,8 +68,11 @@ regardless of which child component has focus):
 | `J` / `K` | Dolly in / out |
 | `X` / `Y` / `Z` | Rotate about the corresponding axis |
 | `1` / `2` / `3` / `4` | Jump to a preset axis-aligned view |
-| `Shift` + any of the above | Larger step (pan/dolly), or reversed direction (rotation) |
+| `Shift` + `X`/`Y`/`Z` | Triple-size rotation step |
 | `F5` | Force an immediate redraw |
+
+`Shift` only affects the rotation keys (`X`/`Y`/`Z`); it has no effect on pan (`L`/`R`/`U`/`D`) or
+dolly (`J`/`K`), which always move by the panel's fixed `getZStep()` amount.
 
 The mouse supports arcball rotation (drag) and zoom (wheel). All of this logic lives in exactly
 one place — `KeyAdapter3D.handleVK` — which both the real keyboard bindings and the on-screen
@@ -112,7 +120,8 @@ for view construction properties (including 3D-specific `ANGLE_X/Y/Z`, `DIST_X/Y
 `SimulationEngine`/`SimulationEngineConfig` for the simulation lifecycle,
 `sim.ui.IconSimulationControlPanel` for the standard run/pause/stop control panel,
 `ViewConfiguration`/`ViewPropertiesBuilder`/`VirtualView` for view registration and layout,
-`TakePicture` for the "Save Image..." menu item every `PlainView3D` gets, and
+`TakePicture` for the "Save/Copy Image..." menu item every `PlainView3D` gets (save to a PNG file
+or copy straight to the clipboard), and
 `edu.cnu.mdi.mapping`'s GeoJSON loaders in the globe demo. If you're extending MDI-3D and find
 yourself reaching for `JFileChooser`, hex-color parsing, or dialog-centering code directly, check
 the base package's utility classes first.
