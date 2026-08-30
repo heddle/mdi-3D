@@ -8,6 +8,13 @@ import com.jogamp.opengl.GLAutoDrawable;
 
 import edu.cnu.mdi.mdi3D.panel.Vector3f;
 
+/**
+ * Static helpers for drawing simple lines directly with GL2 immediate mode.
+ * Part of the {@code basic} package's minimal, standalone JOGL example
+ * classes, kept separate from the
+ * {@link edu.cnu.mdi.mdi3D.panel.Panel3D}/{@link edu.cnu.mdi.mdi3D.item3D.Item3D}
+ * framework used by the rest of {@code mdi3D}.
+ */
 public class BasicLineDrawing {
 
 	/**
@@ -50,6 +57,7 @@ public class BasicLineDrawing {
 	 * @param x2       x coordinates of end of line
 	 * @param y2       y coordinates of end of line
 	 * @param z2       z coordinates of end of line
+	 * @param color    the line color
 	 */
 	public static void drawLines(GLAutoDrawable drawable, float x1[], float y1[], float z1[], float x2[], float y2[],
 			float z2[], Color color) {

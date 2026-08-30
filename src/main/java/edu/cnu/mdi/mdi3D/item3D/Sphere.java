@@ -9,6 +9,10 @@ import com.jogamp.opengl.GLAutoDrawable;
 import edu.cnu.mdi.mdi3D.panel.Panel3D;
 import edu.cnu.mdi.mdi3D.panel.Support3D;
 
+/**
+ * A solid sphere, optionally with drawn latitude/longitude gridlines and
+ * optional Phong-style lighting.
+ */
 public class Sphere extends Item3D {
 
 	private float _radius;

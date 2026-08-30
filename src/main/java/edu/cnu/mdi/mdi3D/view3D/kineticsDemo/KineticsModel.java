@@ -271,7 +271,44 @@ public class KineticsModel {
 		}
 	}
 
-	// Optional reset method to reinitialize the simulation with new parameters.
+	/**
+	 * Reinitialize the simulation with a new particle count and starting
+	 * conditions, discarding any in-progress state.
+	 * <p>
+	 * Particles are placed at random positions within a cubic sub-region of
+	 * side {@code length * volumeFraction} (so the gas starts confined to one
+	 * corner of the box) and given Maxwell&ndash;Boltzmann-distributed
+	 * velocities corresponding to {@code initialTemp}.
+	 * </p>
+	 * <p>
+	 * <b>Known limitations:</b>
+	 * </p>
+	 * <ul>
+	 * <li>{@code length} here only sizes this initial confined sub-region. It
+	 * does <em>not</em> resize the elastic-wall bounding box used by
+	 * {@link #update()}, which remains the {@code length} originally passed to
+	 * the constructor ({@link #length} is {@code final}). Calling
+	 * {@code reset} with a {@code length} different from the constructor's
+	 * will seed particles relative to one box size while {@link #update()}
+	 * continues to bounce them off the walls of another.</li>
+	 * <li>{@code count} must equal the count originally passed to the
+	 * constructor. The double-buffered coordinate arrays are allocated once,
+	 * at construction, at {@code count * 3} floats, and cannot be resized. A
+	 * larger {@code count} throws {@link ArrayIndexOutOfBoundsException}; a
+	 * smaller one leaves stale trailing coordinates in the snapshot buffer.</li>
+	 * </ul>
+	 *
+	 * @param count           number of particles to create; must equal the
+	 *                        count originally passed to the constructor (see
+	 *                        the known limitations above)
+	 * @param length          side length of the cube that the initial
+	 *                        sub-region is computed relative to; see the
+	 *                        known limitation above
+	 * @param volumeFraction  fraction of {@code length} defining the initial
+	 *                        confined sub-region, in {@code (0, 1]}
+	 * @param initialTemp     initial temperature, used to set the standard
+	 *                        deviation of the initial velocity distribution
+	 */
 	public void reset(int count, float length, float volumeFraction, float initialTemp) {
 		internalState.clear();
 		this.temperature = initialTemp;

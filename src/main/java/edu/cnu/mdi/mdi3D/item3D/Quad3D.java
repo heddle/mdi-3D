@@ -7,6 +7,11 @@ import com.jogamp.opengl.GLAutoDrawable;
 import edu.cnu.mdi.mdi3D.panel.Panel3D;
 import edu.cnu.mdi.mdi3D.panel.Support3D;
 
+/**
+ * A single filled (and optionally framed) quadrilateral, defined by four
+ * corner vertices in world coordinates. Corners are expected in either
+ * winding order around the quad's perimeter, not crossed.
+ */
 public class Quad3D extends Item3D {
 
 	// the corner coordinates as [x1, y1, z1, ..., x4, y4, z4]
@@ -40,19 +45,18 @@ public class Quad3D extends Item3D {
 	 * Create a quad from 12 explicit coordinates
 	 *
 	 * @param panel3d   the owner panel
-	 * @param x1
-	 * @param y1
-	 * @param z1
-	 * @param x2
-	 * @param y2
-	 * @param z2
-	 * @param x3
-	 * @param y3
-	 * @param z3
-	 * @param x4
-	 * @param y4
-	 * @param z4
-	 *
+	 * @param x1        x coordinate of the first corner
+	 * @param y1        y coordinate of the first corner
+	 * @param z1        z coordinate of the first corner
+	 * @param x2        x coordinate of the second corner
+	 * @param y2        y coordinate of the second corner
+	 * @param z2        z coordinate of the second corner
+	 * @param x3        x coordinate of the third corner
+	 * @param y3        y coordinate of the third corner
+	 * @param z3        z coordinate of the third corner
+	 * @param x4        x coordinate of the fourth corner
+	 * @param y4        y coordinate of the fourth corner
+	 * @param z4        z coordinate of the fourth corner
 	 * @param color     the quad color
 	 * @param lineWidth the line width
 	 * @param frame     frame the quad
@@ -82,15 +86,15 @@ public class Quad3D extends Item3D {
 	}
 
 	/**
-	 * Create a quad to serve as a constant z plane
+	 * Create a square quad centered on the origin, lying in a constant-z plane.
 	 *
-	 * @param panel3d
-	 * @param z
-	 * @param size
-	 * @param color
-	 * @param lineWidth
-	 * @param frame
-	 * @return
+	 * @param panel3d   the owner panel
+	 * @param z         the z coordinate of the plane
+	 * @param size      half the side length; corners are at (&plusmn;size, &plusmn;size, z)
+	 * @param color     the quad color
+	 * @param lineWidth the line width
+	 * @param frame     frame the quad
+	 * @return the new constant-z quad
 	 */
 	public static Quad3D constantZQuad(Panel3D panel3d, float z, float size, Color color, float lineWidth,
 			boolean frame) {
@@ -146,6 +150,11 @@ public class Quad3D extends Item3D {
 		}
 	}
 
+	/**
+	 * Compute the centroid (mean position) of the quad's four corners.
+	 *
+	 * @return the centroid as [x, y, z]
+	 */
 	public float[] getCentroid() {
 		float cx = 0;
 		float cy = 0;

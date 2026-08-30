@@ -21,6 +21,13 @@ import edu.cnu.mdi.mdi3D.item3D.PointSet3D;
 import edu.cnu.mdi.mdi3D.item3D.Sphere;
 import edu.cnu.mdi.mdi3D.item3D.Triangle3D;
 
+/**
+ * A standalone, minimal {@link JFrame} that hosts a bare {@link Panel3D} with
+ * a handful of sample {@link edu.cnu.mdi.mdi3D.item3D.Item3D} shapes and a
+ * {@link KeyboardLabel} showing the active key bindings. Unlike the MDI demo
+ * views under {@code view3D}, this frame is not an MDI view — it exercises
+ * {@link Panel3D} directly, outside the MDI application/desktop framework.
+ */
 @SuppressWarnings("serial")
 public class Panel3DDemo extends JFrame {
 
@@ -125,6 +132,11 @@ public class Panel3DDemo extends JFrame {
 		};
 	}
 
+	/**
+	 * Entry point: launches the demo frame on the Swing EDT.
+	 *
+	 * @param args ignored
+	 */
 	public static void main(String[] args) {
 		javax.swing.SwingUtilities.invokeLater(new Runnable() {
 			@Override

@@ -329,6 +329,13 @@ public class ScatterPlot3D extends Item3D {
     /**
      * Remove all data points and reset the bounding box to its initial size.
      * Safe to call from any thread.
+     *
+     * @param minX new bounding-box minimum x
+     * @param maxX new bounding-box maximum x
+     * @param minY new bounding-box minimum y
+     * @param maxY new bounding-box maximum y
+     * @param minZ new bounding-box minimum z
+     * @param maxZ new bounding-box maximum z
      */
     public void clear(float minX, float maxX,
                       float minY, float maxY,
@@ -384,7 +391,11 @@ public class ScatterPlot3D extends Item3D {
         _throttleMs = Math.max(0, ms);
     }
 
-    /** Set the radius of each data-point sphere. Default is 0.025. */
+    /**
+     * Set the radius of each data-point sphere. Default is 0.025.
+     *
+     * @param radius sphere radius, in world units
+     */
     public void setPointRadius(float radius) {
         _pointRadius = radius;
     }
@@ -401,12 +412,20 @@ public class ScatterPlot3D extends Item3D {
         _stacks = Math.max(2, stacks);
     }
 
-    /** Set the wireframe bounding-box color. */
+    /**
+     * Set the wireframe bounding-box color.
+     *
+     * @param color the box color
+     */
     public void setBoxColor(Color color) {
         _boxColor = color;
     }
 
-    /** Show or hide the wireframe bounding box. */
+    /**
+     * Show or hide the wireframe bounding box.
+     *
+     * @param show {@code true} to draw the box
+     */
     public void setShowBox(boolean show) {
         _showBox = show;
     }
@@ -434,30 +453,51 @@ public class ScatterPlot3D extends Item3D {
         scheduleRepaintIfNeeded();
     }
 
-    /** Set the OpenGL point size used by {@link RenderStyle#POINTS}. */
+    /**
+     * Set the OpenGL point size used by {@link RenderStyle#POINTS}.
+     *
+     * @param pointSize point size, in pixels (clamped to at least 1)
+     */
     public void setPointSize(float pointSize) {
         _pointSize = Math.max(1f, pointSize);
         scheduleRepaintIfNeeded();
     }
 
-    /** Set the AUTO-mode point/sphere switch threshold. */
+    /**
+     * Set the AUTO-mode point/sphere switch threshold.
+     *
+     * @param threshold point count above which {@link RenderStyle#AUTO} switches
+     *                  from spheres to points (clamped to at least 1)
+     */
     public void setAutoPointThreshold(int threshold) {
         _autoPointThreshold = Math.max(1, threshold);
     }
 
-    /** Show or hide the light floor grid drawn on the lower Z plane. */
+    /**
+     * Show or hide the light floor grid drawn on the lower Z plane.
+     *
+     * @param showFloorGrid {@code true} to draw the floor grid
+     */
     public void setShowFloorGrid(boolean showFloorGrid) {
         _showFloorGrid = showFloorGrid;
         scheduleRepaintIfNeeded();
     }
 
-    /** Set the floor-grid color. */
+    /**
+     * Set the floor-grid color.
+     *
+     * @param gridColor the grid color, or {@code null} to restore the default
+     */
     public void setGridColor(Color gridColor) {
         _gridColor = (gridColor == null) ? GRID_COLOR : gridColor;
         scheduleRepaintIfNeeded();
     }
 
-    /** Set the number of floor-grid divisions in X and Y. */
+    /**
+     * Set the number of floor-grid divisions in X and Y.
+     *
+     * @param gridDivisions number of divisions per axis (clamped to at least 1)
+     */
     public void setGridDivisions(int gridDivisions) {
         _gridDivisions = Math.max(1, gridDivisions);
         scheduleRepaintIfNeeded();

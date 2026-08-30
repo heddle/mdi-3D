@@ -14,6 +14,11 @@ import edu.cnu.mdi.splot.plot.AReadyPlotPanel;
 import edu.cnu.mdi.splot.plot.PlotChangeType;
 import edu.cnu.mdi.ui.colors.X11Colors;
 
+/**
+ * An sPlot-based entropy-vs-time strip chart for the kinetics demo, built
+ * from a single connected {@link Curve} that new points are appended to as
+ * the simulation runs.
+ */
 @SuppressWarnings("serial")
 public class EntropyPlotPanel extends AReadyPlotPanel {
 
@@ -70,6 +75,16 @@ public class EntropyPlotPanel extends AReadyPlotPanel {
 		return "Entropy vs Time";
 	}
 
+	/**
+	 * Append one entropy sample to the plot and repaint.
+	 * <p>
+	 * A no-op if called before {@link #setParameters()} has run and installed
+	 * {@link #entropyCurve}.
+	 * </p>
+	 *
+	 * @param x time value
+	 * @param y entropy value
+	 */
 	public void addEntropy(double x, double y) {
 		if (entropyCurve != null) {
 			entropyCurve.add(x, y);

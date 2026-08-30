@@ -7,6 +7,12 @@ import com.jogamp.opengl.GLAutoDrawable;
 import edu.cnu.mdi.mdi3D.panel.Panel3D;
 import edu.cnu.mdi.mdi3D.panel.Support3D;
 
+/**
+ * A single straight line segment between two endpoints in world coordinates.
+ * Also caches the segment length and unit direction vector, used by
+ * subclasses (e.g. {@link Axis3D}) to extend or shorten the drawn line
+ * relative to its defining endpoints.
+ */
 public class Line3D extends Item3D {
 
 	// p0 and p1 are the end points
@@ -161,6 +167,16 @@ public class Line3D extends Item3D {
 		}
 	}
 
+	/**
+	 * Compute a point beyond one endpoint, along the line's direction.
+	 *
+	 * @param whichEnd which endpoint to extend from: {@code 0} extends past
+	 *                 {@code p0} away from {@code p1}; any other value extends
+	 *                 past {@code p1} away from {@code p0}
+	 * @param amount   distance to extend by, in world units
+	 * @param coords   destination array, filled with the extended point as
+	 *                 {@code [x, y, z]}; must have length at least 3
+	 */
 	public void extendedPoint(int whichEnd, float amount, float coords[]) {
 		if (whichEnd == 0) {
 			for (int i = 0; i < 3; i++) {

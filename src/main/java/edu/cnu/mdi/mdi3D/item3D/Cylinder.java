@@ -7,6 +7,11 @@ import com.jogamp.opengl.GLAutoDrawable;
 import edu.cnu.mdi.mdi3D.panel.Panel3D;
 import edu.cnu.mdi.mdi3D.panel.Support3D;
 
+/**
+ * A solid cylindrical tube between two endpoints, with a fixed radius,
+ * optional extension beyond its defining endpoints, and optional Phong-style
+ * lighting.
+ */
 public class Cylinder extends Item3D {
 
 	private float _radius;
@@ -69,6 +74,14 @@ public class Cylinder extends Item3D {
 		_extensionFactor = extensionFactor;
 	}
 
+	/**
+	 * Constructor for a Cylinder item in 3D space.
+	 *
+	 * @param panel3D The parent 3D panel
+	 * @param data    the endpoints and radius as
+	 *                {@code [x1, y1, z1, x2, y2, z2, radius]}
+	 * @param color   Color of the cylinder
+	 */
 	public Cylinder(Panel3D panel3D, float data[], Color color) {
 		this(panel3D, data[0], data[1], data[2], data[3], data[4], data[5], data[6], color);
 	}
@@ -128,6 +141,17 @@ public class Cylinder extends Item3D {
 		}
 	}
 
+	/**
+	 * Move the cylinder to new endpoints, replacing the ones supplied at
+	 * construction.
+	 *
+	 * @param x1 X coordinate of one end
+	 * @param y1 Y coordinate of one end
+	 * @param z1 Z coordinate of one end
+	 * @param x2 X coordinate of the other end
+	 * @param y2 Y coordinate of the other end
+	 * @param z2 Z coordinate of the other end
+	 */
 	public void reset(float x1, float y1, float z1, float x2, float y2, float z2) {
 		_x1 = x1;
 		_y1 = y1;

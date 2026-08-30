@@ -7,6 +7,10 @@ import com.jogamp.opengl.GLAutoDrawable;
 import edu.cnu.mdi.mdi3D.panel.Panel3D;
 import edu.cnu.mdi.mdi3D.panel.Support3D;
 
+/**
+ * A set of same-color, same-size points, drawn as either square or circular
+ * point sprites.
+ */
 public class PointSet3D extends Item3D {
 
 	// the points as [x1, y1, z1, ..., xn, yn, zn]
@@ -28,6 +32,7 @@ public class PointSet3D extends Item3D {
 	 * @param coords    the points as [x1, y1, z1, ..., xn, yn, zn]
 	 * @param color     the color of the points
 	 * @param pointSize the drawing size of the points
+	 * @param circular  if {@code true}, draw round point sprites; if {@code false}, square
 	 */
 	public PointSet3D(Panel3D panel3D, float[] coords, Color color, float pointSize, boolean circular) {
 		super(panel3D);
@@ -52,9 +57,9 @@ public class PointSet3D extends Item3D {
 	}
 
 	/**
-	 * Get the coordinates of the points.
+	 * Compute the centroid (mean position) of the points.
 	 *
-	 * @return the points as [x1, y1, z1, ..., xn, yn, zn]
+	 * @return the centroid as [x, y, z]
 	 */
 	public float[] getCentroid() {
 		int n = _coords.length / 3;

@@ -4,6 +4,13 @@ import java.awt.Color;
 
 import com.jogamp.opengl.GL2;
 
+/**
+ * Static GL2 color-state helper used by the {@code basic} package's minimal,
+ * standalone JOGL example classes ({@link BasicPanel3D}, {@link
+ * BasicLineDrawing}) — a bare-JOGL counterpart kept separate from the
+ * {@link edu.cnu.mdi.mdi3D.panel.Panel3D}/{@link edu.cnu.mdi.mdi3D.item3D.Item3D}
+ * framework used by the rest of {@code mdi3D}.
+ */
 public class BasicColorSupport3D {
 
 	/**

@@ -7,6 +7,12 @@ import com.jogamp.opengl.GLAutoDrawable;
 import com.jogamp.opengl.GLEventListener;
 import com.jogamp.opengl.awt.GLJPanel;
 
+/**
+ * A minimal, self-contained {@link GLJPanel} with no dependency on the
+ * {@link edu.cnu.mdi.mdi3D.panel.Panel3D}/{@link edu.cnu.mdi.mdi3D.item3D.Item3D}
+ * framework used by the rest of {@code mdi3D}. Part of the {@code basic}
+ * package's bare-JOGL example classes.
+ */
 @SuppressWarnings("serial")
 public class BasicPanel3D extends GLJPanel implements GLEventListener {
 
