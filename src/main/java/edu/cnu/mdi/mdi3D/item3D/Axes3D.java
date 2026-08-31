@@ -32,6 +32,9 @@ public class Axes3D extends Item3D {
 	 * @param textColor color of axis labels
 	 * @param font      the text font
 	 * @param numDec    the number of decimals to display
+	 * @throws ArrayIndexOutOfBoundsException if {@code limits} has fewer than 6 elements,
+	 *                  or {@code labels} is non-null but has fewer than 3 elements
+	 * @throws NullPointerException if {@code limits} is {@code null}
 	 */
 	public Axes3D(Panel3D panel3D, float[] limits, String labels[], Color color, float lineWidth, int numTicksX,
 			int numTicksY, int numTicksZ, Color tickColor, Color textColor, Font font, int numDec) {
@@ -56,31 +59,30 @@ public class Axes3D extends Item3D {
 	 * @param textColor color of axis labels
 	 * @param font      the text font
 	 * @param numDec    the number of decimals to display
+	 * @throws ArrayIndexOutOfBoundsException if {@code limits} has fewer than 6 elements,
+	 *                  or {@code labels} is non-null but has fewer than 3 elements
+	 * @throws NullPointerException if {@code limits} is {@code null}
 	 */
 	public Axes3D(Panel3D panel3D, float[] limits, String labels[], float zoff, Color color, float lineWidth,
 			int numTicksX, int numTicksY, int numTicksZ, Color tickColor, Color textColor, Font font, int numDec) {
 
 		super(panel3D);
 
-		try {
-            Axis3D _xAxisItem = new Axis3D(panel3D, Axis3D.AxisType.X_AXIS, (labels == null) ? null : labels[0], limits[0],
-                    limits[1], 0f, color, lineWidth, numTicksX, tickColor, textColor, font, numDec);
-            Axis3D _yAxisItem = new Axis3D(panel3D, Axis3D.AxisType.Y_AXIS, (labels == null) ? null : labels[1], limits[2],
-                    limits[3], 0f, color, lineWidth, numTicksY, tickColor, textColor, font, numDec);
-            Axis3D _zAxisItem = new Axis3D(panel3D, Axis3D.AxisType.Z_AXIS, (labels == null) ? null : labels[2], limits[4],
-                    limits[5], zoff, color, lineWidth, numTicksZ, tickColor, textColor, font, numDec);
+        Axis3D _xAxisItem = new Axis3D(panel3D, Axis3D.AxisType.X_AXIS, (labels == null) ? null : labels[0], limits[0],
+                limits[1], 0f, color, lineWidth, numTicksX, tickColor, textColor, font, numDec);
+        Axis3D _yAxisItem = new Axis3D(panel3D, Axis3D.AxisType.Y_AXIS, (labels == null) ? null : labels[1], limits[2],
+                limits[3], 0f, color, lineWidth, numTicksY, tickColor, textColor, font, numDec);
+        Axis3D _zAxisItem = new Axis3D(panel3D, Axis3D.AxisType.Z_AXIS, (labels == null) ? null : labels[2], limits[4],
+                limits[5], zoff, color, lineWidth, numTicksZ, tickColor, textColor, font, numDec);
 
-			addChild(_xAxisItem);
-			addChild(_yAxisItem);
-			addChild(_zAxisItem);
+		addChild(_xAxisItem);
+		addChild(_yAxisItem);
+		addChild(_zAxisItem);
 
-			setFillColor(color);
-			setLineWidth(lineWidth);
-			setTextColor(textColor);
-			setFont(font);
-		} catch (Exception e) {
-			e.printStackTrace();
-		}
+		setFillColor(color);
+		setLineWidth(lineWidth);
+		setTextColor(textColor);
+		setFont(font);
 	}
 
 	/**
