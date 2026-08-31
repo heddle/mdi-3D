@@ -387,20 +387,120 @@ public abstract class SimulationView3D extends PlainView3D implements ISimulatio
 		}
 	}
 
+	// -----------------------------------------------------------------------
 	// Hooks (EDT)
+	//
+	// Subclasses override these no-op default methods to react to simulation
+	// lifecycle events without implementing SimulationListener themselves.
+	// Each hook is called on the Swing EDT, immediately after this class's
+	// own SimulationListener method of the corresponding name runs (e.g.
+	// onSimulationRun is called from onRun(SimulationContext)).
+	// -----------------------------------------------------------------------
+
+	/**
+	 * Called whenever the simulation transitions between states, after any
+	 * pending engine reset triggered by {@link #requestEngineReset} has been applied.
+	 *
+	 * @param ctx    simulation context
+	 * @param from   the state being left
+	 * @param to     the state being entered
+	 * @param reason human-readable reason for the transition, or {@code null}
+	 */
 	protected void onSimulationStateChange(SimulationContext ctx, SimulationState from, SimulationState to, String reason) {}
+
+	/**
+	 * Called once the engine has initialized the simulation.
+	 *
+	 * @param ctx simulation context
+	 */
 	protected void onSimulationInit(SimulationContext ctx) {}
+
+	/**
+	 * Called when the simulation becomes ready to run.
+	 *
+	 * @param ctx simulation context
+	 */
 	protected void onSimulationReady(SimulationContext ctx) {}
+
+	/**
+	 * Called when the simulation starts or restarts running.
+	 *
+	 * @param ctx simulation context
+	 */
 	protected void onSimulationRun(SimulationContext ctx) {}
+
+	/**
+	 * Called when the simulation resumes after being paused.
+	 *
+	 * @param ctx simulation context
+	 */
 	protected void onSimulationResume(SimulationContext ctx) {}
+
+	/**
+	 * Called when the simulation is paused.
+	 *
+	 * @param ctx simulation context
+	 */
 	protected void onSimulationPause(SimulationContext ctx) {}
+
+	/**
+	 * Called when the simulation completes normally.
+	 *
+	 * @param ctx simulation context
+	 */
 	protected void onSimulationDone(SimulationContext ctx) {}
+
+	/**
+	 * Called when the simulation terminates with an error.
+	 *
+	 * @param ctx   simulation context
+	 * @param error the exception that caused the failure
+	 */
 	protected void onSimulationFail(SimulationContext ctx, Throwable error) {}
+
+	/**
+	 * Called when cancellation of the running simulation has been requested.
+	 *
+	 * @param ctx simulation context
+	 */
 	protected void onSimulationCancelRequested(SimulationContext ctx) {}
+
+	/**
+	 * Called when the simulation posts an informational message.
+	 *
+	 * @param ctx     simulation context
+	 * @param message message text from the simulation
+	 */
 	protected void onSimulationMessage(SimulationContext ctx, String message) {}
+
+	/**
+	 * Called when the simulation reports progress.
+	 *
+	 * @param ctx      simulation context
+	 * @param progress current progress information
+	 */
 	protected void onSimulationProgress(SimulationContext ctx, ProgressInfo progress) {}
+
+	/**
+	 * Called on every engine refresh request, immediately before this class
+	 * repaints or refreshes the 3D panel in response.
+	 *
+	 * @param ctx simulation context
+	 */
 	protected void onSimulationRefresh(SimulationContext ctx) {}
 
+	/**
+	 * Swap in a new {@link SimulationEngine}, unregistering this view as a
+	 * listener on the old engine and registering it on the new one, and
+	 * rebinding the control panel if it implements
+	 * {@link edu.cnu.mdi.sim.ui.ISimulationControlPanel}.
+	 * <p>
+	 * Must run on the EDT; if called from another thread, it re-dispatches
+	 * itself via {@link SwingUtilities#invokeLater(Runnable)}.
+	 * </p>
+	 *
+	 * @param newEngine the engine to install; must not be {@code null}
+	 */
 	protected final void replaceEngine(SimulationEngine newEngine) {
 		Objects.requireNonNull(newEngine, "newEngine");
 

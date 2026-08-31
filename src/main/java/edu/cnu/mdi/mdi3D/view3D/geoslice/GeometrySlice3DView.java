@@ -2,7 +2,6 @@ package edu.cnu.mdi.mdi3D.view3D.geoslice;
 
 import java.awt.BorderLayout;
 import java.awt.Color;
-import java.awt.Dimension;
 import java.awt.FlowLayout;
 import java.util.Properties;
 
@@ -11,7 +10,6 @@ import javax.swing.JLabel;
 import javax.swing.JPanel;
 import javax.swing.JSlider;
 import javax.swing.SwingConstants;
-import javax.swing.SwingUtilities;
 import javax.swing.event.ChangeEvent;
 
 import edu.cnu.mdi.geometry.Line;
@@ -119,11 +117,14 @@ public class GeometrySlice3DView extends PlainView3D {
         super(props);
         add(createControlPanel(), BorderLayout.SOUTH);
 
-        // The Panel3D constructor calls createInitialItems() before this view's
-        // fields have finished initializing. The panel schedules the first
-        // rebuild for later, but this second call is harmless and makes the
-        // startup path explicit.
-        SwingUtilities.invokeLater(this::rebuildScene);
+        // Without this, BorderLayout never (re)computes the SOUTH control panel's
+        // allocation after it's added here: all subsequent growth goes to CENTER
+        // (the GLJPanel) and the control panel stays pinned at whatever size it
+        // implicitly had, clipping it. SimulationView3D does the same
+        // doLayout()/validate() after adding its control panel, for the same reason.
+        doLayout();
+        validate();
+
     }
 
     /**
@@ -188,11 +189,9 @@ public class GeometrySlice3DView extends PlainView3D {
      * Create the hosted 3D panel.
      *
      * <p>
-     * {@link Panel3D} invokes {@code createInitialItems()} from its own
-     * constructor. Because this occurs during the superclass constructor call,
-     * the outer {@code GeometrySlice3DView} has not finished field
-     * initialization yet. For that reason the initial scene rebuild is deferred
-     * with {@link SwingUtilities#invokeLater(Runnable)}.
+     * Initial scene creation occurs when the panel's first OpenGL context is
+     * initialized. By that time construction of this view has completed, so the
+     * shared geometry model and other instance state are available normally.
      * </p>
      */
     @Override
@@ -207,10 +206,10 @@ public class GeometrySlice3DView extends PlainView3D {
 
             @Override
             public void createInitialItems() {
-                SwingUtilities.invokeLater(GeometrySlice3DView.this::rebuildScene);
+                populateScene(this);
             }
         };
-        
+
         panel.setNavigationStepFromExtent(NAVIGATION_EXTENT);
 
         scenePanel = panel;
@@ -223,11 +222,10 @@ public class GeometrySlice3DView extends PlainView3D {
      * @return control panel
      */
     private JPanel createControlPanel() {
-        JPanel panel = new JPanel(new FlowLayout(FlowLayout.LEFT, 8, 4));
+        JPanel panel = new JPanel(new BorderLayout(8, 4));
         panel.setBorder(BorderFactory.createEtchedBorder());
 
         phiLabel = new JLabel(labelText());
-        phiLabel.setPreferredSize(new Dimension(70, 22));
         phiLabel.setHorizontalAlignment(SwingConstants.RIGHT);
         phiLabel.setFont(Fonts.smallFont);
 
@@ -236,7 +234,6 @@ public class GeometrySlice3DView extends PlainView3D {
         slider.setMinorTickSpacing(1);
         slider.setPaintTicks(true);
         slider.setPaintLabels(true);
-        slider.setPreferredSize(new Dimension(360, 48));
 
         slider.addChangeListener((ChangeEvent e) -> {
             phiDeg = slider.getValue();
@@ -247,10 +244,13 @@ public class GeometrySlice3DView extends PlainView3D {
         JLabel note = new JLabel("yellow plane is the current constant-\u03c6 slice");
         note.setFont(Fonts.smallFont);
 
-        panel.add(new JLabel("Slice angle:"));
-        panel.add(phiLabel);
-        panel.add(slider);
-        panel.add(note);
+        JPanel labelPanel = new JPanel(new FlowLayout(FlowLayout.LEFT, 4, 0));
+        labelPanel.add(new JLabel("Slice angle:"));
+        labelPanel.add(phiLabel);
+
+        panel.add(labelPanel, BorderLayout.WEST);
+        panel.add(slider, BorderLayout.CENTER);
+        panel.add(note, BorderLayout.EAST);
 
         return panel;
     }
@@ -278,13 +278,21 @@ public class GeometrySlice3DView extends PlainView3D {
         }
 
         scenePanel.clearItems();
-
-        addAxes(scenePanel);
-        addShellWireframes(scenePanel);
-        addWires(scenePanel);
-        addSlicePlane(scenePanel, phiDeg);
-
+        populateScene(scenePanel);
         scenePanel.softRefresh();
+    }
+
+    /**
+     * Populate a panel with the geometry corresponding to the current slice
+     * angle.
+     *
+     * @param panel panel receiving the scene items
+     */
+    private void populateScene(Panel3D panel) {
+        addAxes(panel);
+        addShellWireframes(panel);
+        addWires(panel);
+        addSlicePlane(panel, phiDeg);
     }
 
     /**

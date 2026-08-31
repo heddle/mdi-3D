@@ -7,6 +7,10 @@ import com.jogamp.opengl.GLAutoDrawable;
 import edu.cnu.mdi.mdi3D.panel.Panel3D;
 import edu.cnu.mdi.mdi3D.panel.Support3D;
 
+/**
+ * A single filled (and optionally framed) triangle, defined by three vertices
+ * in world coordinates.
+ */
 public class Triangle3D extends Item3D {
 
 	// the coordinates as [x1, y1, z1, ..., x3, y3, z3]

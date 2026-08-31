@@ -1,6 +1,7 @@
 package edu.cnu.mdi.mdi3D.view3D;
 
 import java.awt.BorderLayout;
+import java.awt.Component;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.awt.event.ComponentEvent;
@@ -8,12 +9,15 @@ import java.awt.event.FocusEvent;
 import java.util.Properties;
 
 import javax.swing.Box;
+import javax.swing.JMenu;
 import javax.swing.JMenuBar;
+import javax.swing.JMenuItem;
 import javax.swing.SwingUtilities;
 
 import edu.cnu.mdi.container.IContainer;
 import edu.cnu.mdi.mdi3D.panel.Panel3D;
 import edu.cnu.mdi.util.PropertyUtils;
+import edu.cnu.mdi.util.TakePicture;
 import edu.cnu.mdi.view.BaseView;
 
 /**
@@ -55,6 +59,7 @@ public abstract class PlainView3D extends BaseView implements ActionListener {
 		JMenuBar menuBar = new JMenuBar();
 		setJMenuBar(menuBar);
 		addMenus();
+		installImageMenu(menuBar);
 		installViewInfoButton(menuBar);
 		
 		float angleX = PropertyUtils.getFloat(properties, PropertyUtils.ANGLE_X);
@@ -121,10 +126,26 @@ public abstract class PlainView3D extends BaseView implements ActionListener {
 	}
 
 	/**
-	 * When a 3D internal frame is resized, schedule a refresh.
+	 * When a 3D internal frame is resized, re-flow this view's own
+	 * {@code BorderLayout} before scheduling a 3D refresh.
+	 *
+	 * <p>
+	 * Subclasses that add extra components at other {@code BorderLayout}
+	 * regions (e.g. a control strip at {@code SOUTH}) may contain a
+	 * {@code FlowLayout} bar that wraps to a different number of rows as the
+	 * view gets narrower or wider. Without an explicit layout pass here, a
+	 * resize driven programmatically by the MDI virtual desktop (rather than
+	 * a native window-manager drag) does not reliably trigger Swing's normal
+	 * invalidate/validate cascade, so a newly-wrapped row's extra height is
+	 * never accounted for and gets clipped at the view's bottom edge.
+	 * </p>
+	 *
+	 * @param e the resize event
 	 */
 	@Override
 	public void componentResized(ComponentEvent e) {
+		doLayout();
+		validate();
 		if (_panel3D != null) _panel3D.softRefresh();
 	}
 
@@ -145,7 +166,59 @@ public abstract class PlainView3D extends BaseView implements ActionListener {
 		// support containers.
 	    return null;
 	}
-	
+
+	/**
+	 * {@inheritDoc}
+	 *
+	 * <p>
+	 * With no container, {@link BaseView}'s default would fall back to
+	 * {@code this} — the whole view, menu bar and any north/south control
+	 * panels included. What a 3D view's image should actually be is just the
+	 * rendered frame, so this returns the {@code GLJPanel} directly.
+	 * </p>
+	 */
+	@Override
+	public Component getImageComponent() {
+		return (_panel3D != null) ? _panel3D.getGLJPanel() : this;
+	}
+
+	/**
+	 * Install a standard "Image" menu, giving every MDI-3D view a way to save
+	 * or copy a snapshot of the current 3D frame without each demo wiring its
+	 * own.
+	 *
+	 * <p>
+	 * Delegates entirely to {@link TakePicture#takePicture(java.awt.Component)}
+	 * — the same capture path 2D MDI views already use — applied to
+	 * {@link #getImageComponent()} (the {@code GLJPanel}, not {@code this}).
+	 * This works because {@code GLJPanel} is FBO-backed and paints like any
+	 * other Swing component, so the ordinary component-snapshot path
+	 * captures the current rendered frame correctly. {@code takePicture}
+	 * itself asks whether to save a PNG file or copy to the clipboard, so
+	 * this one menu item covers both.
+	 * </p>
+	 *
+	 * <p>
+	 * The menu item calls {@link #getImageComponent()} at click time (not at
+	 * menu-build time, when {@link #_panel3D} has not yet been assigned by
+	 * the constructor), so installing this before {@link #_panel3D} exists is
+	 * safe.
+	 * </p>
+	 *
+	 * @param menuBar the menu bar on which to install the menu
+	 */
+	private void installImageMenu(JMenuBar menuBar) {
+		if (menuBar == null) {
+			return;
+		}
+
+		JMenu imageMenu = new JMenu("Image");
+		JMenuItem saveItem = new JMenuItem("Save/Copy Image...");
+		saveItem.addActionListener(e -> TakePicture.takePicture(getImageComponent()));
+		imageMenu.add(saveItem);
+		menuBar.add(imageMenu);
+	}
+
 	/**
 	 * Install the standard MDI view-information button on the 3D view menu bar.
 	 *

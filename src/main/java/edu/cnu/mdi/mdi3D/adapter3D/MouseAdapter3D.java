@@ -12,6 +12,15 @@ import com.jogamp.opengl.awt.GLJPanel;
 import edu.cnu.mdi.mdi3D.panel.Panel3D;
 import edu.cnu.mdi.mdi3D.panel.Vector3f;
 
+/**
+ * Standard mouse interaction for a {@link Panel3D}: drag-to-rotate, and
+ * wheel-to-zoom.
+ * <p>
+ * This is the mouse counterpart to {@link edu.cnu.mdi.mdi3D.adapter3D.KeyAdapter3D}:
+ * both translate raw AWT input events into {@link Panel3D} rotation/zoom calls
+ * so individual demo views don't have to re-implement camera controls.
+ * </p>
+ */
 public class MouseAdapter3D implements MouseListener, MouseMotionListener, MouseWheelListener {
 
 	protected int prevMouseX;

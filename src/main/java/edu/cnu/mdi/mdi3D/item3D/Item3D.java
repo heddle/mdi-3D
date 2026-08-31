@@ -11,6 +11,46 @@ import com.jogamp.opengl.GLAutoDrawable;
 import edu.cnu.mdi.mdi3D.panel.Bad3DPropertyException;
 import edu.cnu.mdi.mdi3D.panel.Panel3D;
 
+/**
+ * Base class for every drawable object hosted on a {@link Panel3D}.
+ * <p>
+ * {@code Item3D} is the 3D analogue of MDI's 2D {@code AItem}: a self-contained
+ * drawable that owns its own appearance properties and can be organized into a
+ * parent/child tree so a group of items (e.g. the axes of a coordinate frame,
+ * or the components of a composite shape) can be shown, hidden, or disposed as
+ * a unit.
+ * </p>
+ *
+ * <h2>Properties</h2>
+ * <p>
+ * Appearance is stored as a small {@link Properties}-backed key/value bag
+ * ({@link #LINE_WIDTH}, {@link #FILLCOLOR}, {@link #FILLALPHA}, {@link #LINECOLOR},
+ * {@link #LINEALPHA}, {@link #TEXT_COLOR}, {@link #FONT}), accessed through the
+ * typed {@code get*}/{@code set*} convenience methods. Any property that has not
+ * been explicitly set falls back to a class-wide default.
+ * </p>
+ *
+ * <h2>Drawing and disposal</h2>
+ * <p>
+ * Subclasses implement {@link #draw(GLAutoDrawable)} for their own custom
+ * rendering, and only that GL-thread-bound method should touch the GL context.
+ * {@link #drawItem(GLAutoDrawable)} and {@link #disposeItem(GLAutoDrawable)} are
+ * called by {@link Panel3D} and are {@code final}: they invoke {@link
+ * #draw(GLAutoDrawable)}/{@link #dispose(GLAutoDrawable)} on this item and then
+ * recurse into every visible child, so a subtree draws or releases its GL
+ * resources with a single call from the panel.
+ * </p>
+ *
+ * <h2>Thread safety</h2>
+ * <p>
+ * {@link #isVisible()}/{@link #setVisible(boolean)} and the child list are safe
+ * to touch from threads other than the GL rendering thread: visibility is
+ * {@code volatile}, and {@link #addChild(Item3D)}/{@link #removeChild(Item3D)}
+ * synchronize on {@code this}, the same monitor used to snapshot the child list
+ * before iterating it during draw/dispose. Actual GL calls inside {@link
+ * #draw(GLAutoDrawable)} still must only happen on the GL thread.
+ * </p>
+ */
 public abstract class Item3D {
 
 	/** property for line width. Default is 1f */
@@ -39,7 +79,10 @@ public abstract class Item3D {
 
 	// controls whether the item is visible
 	// only in the sense do we "want" to draw it
-	private boolean _visible = true;
+	// volatile: setVisible()/isVisible() have no other synchronization, so a
+	// caller on a non-EDT thread still publishes the change safely to the
+	// EDT-based renderer.
+	private volatile boolean _visible = true;
 
 	// this item's child items
 	private Vector<Item3D> _children;
@@ -101,12 +144,25 @@ public abstract class Item3D {
 	public final void drawItem(GLAutoDrawable drawable) {
 		draw(drawable);
 
-		if (_children != null) {
-			for (Item3D item : _children) {
-				if (item.isVisible()) {
-					item.drawItem(drawable);
-				}
+		for (Item3D item : childrenSnapshot()) {
+			if (item.isVisible()) {
+				item.drawItem(drawable);
 			}
+		}
+	}
+
+	/**
+	 * Snapshot the current children under {@code synchronized(this)} — the same
+	 * monitor {@link #addChild(Item3D)} and {@link #removeChild(Item3D)} use —
+	 * so a concurrent structural change (e.g. a child added from a non-EDT
+	 * thread) can never be observed mid-iteration here.
+	 *
+	 * @return an immutable snapshot list; empty (never {@code null}) if there
+	 *         are no children
+	 */
+	private List<Item3D> childrenSnapshot() {
+		synchronized (this) {
+			return (_children == null) ? List.of() : List.copyOf(_children);
 		}
 	}
 
@@ -118,11 +174,46 @@ public abstract class Item3D {
 	public abstract void draw(GLAutoDrawable drawable);
 
 	/**
+	 * Called by the panel3D when its GL context is being torn down. Do not
+	 * overwrite.
+	 * <p>
+	 * Releases this item's own GL resources via {@link #dispose(GLAutoDrawable)},
+	 * then recurses into children so a subtree is fully released with one call.
+	 * </p>
+	 *
+	 * @param drawable the OpenGL drawable being disposed
+	 */
+	public final void disposeItem(GLAutoDrawable drawable) {
+		dispose(drawable);
+
+		for (Item3D item : childrenSnapshot()) {
+			item.disposeItem(drawable);
+		}
+	}
+
+	/**
+	 * Override to release any GL resources this item owns (textures, display
+	 * lists, text renderers, etc.).
+	 *
+	 * <p>
+	 * The default implementation does nothing. Items that lazily allocate
+	 * GL-backed resources — for example a JOGL {@code TextRenderer} — should
+	 * override this to release them and null out the field so a subsequent
+	 * {@code draw} call (if any) lazily recreates it.
+	 * </p>
+	 *
+	 * @param drawable the OpenGL drawable being disposed
+	 */
+	protected void dispose(GLAutoDrawable drawable) {
+		// no resources to release by default
+	}
+
+	/**
 	 * Get a 3D property
 	 *
 	 * @param key the name of the property
 	 * @return the object corresponding to that key, or null
-	 * @throws Bad3DPropertyException
+	 * @throws Bad3DPropertyException if the property is missing or not of the expected type
 	 */
 	public Object get(String key) throws Bad3DPropertyException {
 		Object obj = _properties.get(key);
@@ -137,7 +228,7 @@ public abstract class Item3D {
 	 *
 	 * @param key the name of the property
 	 * @return the String corresponding to that key, or null
-	 * @throws Bad3DPropertyException
+	 * @throws Bad3DPropertyException if the property is missing or not of the expected type
 	 */
 	public String getString(String key) throws Bad3DPropertyException {
 		Object obj = get(key);
@@ -154,7 +245,7 @@ public abstract class Item3D {
 	 *
 	 * @param key the name of the property
 	 * @return the (AWT) Color corresponding to that key, or null
-	 * @throws Bad3DPropertyException
+	 * @throws Bad3DPropertyException if the property is missing or not of the expected type
 	 */
 	public Color getColor(String key) throws Bad3DPropertyException {
 		Object obj = get(key);
@@ -171,7 +262,7 @@ public abstract class Item3D {
 	 *
 	 * @param key the name of the property
 	 * @return the Font corresponding to that key, or null
-	 * @throws Bad3DPropertyException
+	 * @throws Bad3DPropertyException if the property is missing or not of the expected type
 	 */
 	public Font getFont(String key) throws Bad3DPropertyException {
 		Object obj = get(key);
@@ -188,7 +279,7 @@ public abstract class Item3D {
 	 *
 	 * @param key the name of the property
 	 * @return the Integer corresponding to that key, or null
-	 * @throws Bad3DPropertyException
+	 * @throws Bad3DPropertyException if the property is missing or not of the expected type
 	 */
 	public int getInt(String key) throws Bad3DPropertyException {
 		Object obj = get(key);
@@ -205,7 +296,7 @@ public abstract class Item3D {
 	 *
 	 * @param key the name of the property
 	 * @return the Float corresponding to that key, or null
-	 * @throws Bad3DPropertyException
+	 * @throws Bad3DPropertyException if the property is missing or not of the expected type
 	 */
 	public float getFloat(String key) throws Bad3DPropertyException {
 		Object obj = get(key);
@@ -426,17 +517,25 @@ public abstract class Item3D {
 	}
 
 	/**
-	 * Add a child item
+	 * Add a child item.
+	 * <p>
+	 * The remove-then-add (to move an existing child to the end) is performed
+	 * under {@code synchronized(this)} so it is atomic with respect to {@link
+	 * #childrenSnapshot()} — a concurrent drawer/disposer can never observe the
+	 * child transiently missing.
+	 * </p>
 	 *
 	 * @param item the child item
 	 */
 	public void addChild(Item3D item) {
 		if (item != null) {
-			if (_children == null) {
-				_children = new Vector<>();
+			synchronized (this) {
+				if (_children == null) {
+					_children = new Vector<>();
+				}
+				_children.remove(item);
+				_children.addElement(item);
 			}
-			_children.remove(item);
-			_children.addElement(item);
 			item._parent = this;
 		}
 	}
@@ -447,8 +546,12 @@ public abstract class Item3D {
 	 * @param item the chold item
 	 */
 	public void removeChild(Item3D item) {
-		if ((_children != null) && (item != null)) {
-			_children.remove(item);
+		if (item != null) {
+			synchronized (this) {
+				if (_children != null) {
+					_children.remove(item);
+				}
+			}
 		}
 	}
 
@@ -484,6 +587,8 @@ public abstract class Item3D {
 	/**
 	 * A representative point for transparent sorting, in world coordinates.
 	 * Default is origin. Override in items with a natural center (Sphere, Cube, Cylinder, etc.).
+	 *
+	 * @return the sort point as {@code [x, y, z]}
 	 */
 	public float[] getSortPoint() {
 	    return new float[] {0f, 0f, 0f};

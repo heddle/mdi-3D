@@ -4,7 +4,9 @@ import java.awt.BorderLayout;
 import java.util.Vector;
 
 import javax.swing.JComponent;
+import javax.swing.JLabel;
 import javax.swing.JPanel;
+import javax.swing.SwingConstants;
 
 import com.jogamp.opengl.GL;
 import com.jogamp.opengl.GL2;
@@ -21,7 +23,7 @@ import com.jogamp.opengl.fixedfunc.GLLightingFunc;
 import com.jogamp.opengl.fixedfunc.GLMatrixFunc;
 import com.jogamp.opengl.glu.GLU;
 
-import edu.cnu.mdi.mdi3D.adapter3D.KeyAdapter3D;
+import edu.cnu.mdi.dialog.DialogUtils;
 import edu.cnu.mdi.mdi3D.adapter3D.KeyBindings3D;
 import edu.cnu.mdi.mdi3D.adapter3D.MouseAdapter3D;
 import edu.cnu.mdi.mdi3D.item3D.Item3D;
@@ -82,7 +84,19 @@ public class Panel3D extends JPanel implements GLEventListener {
 
 	protected GLProfile glprofile;
 	protected GLCapabilities glcapabilities;
+
+	/**
+	 * The hosted OpenGL panel, or {@code null} if OpenGL could not be
+	 * initialized on this system (see {@link #isGLAvailable()}). Every method
+	 * in this class that touches {@code gljpanel} already null-checks it, so a
+	 * {@code null} value here degrades gracefully to a no-op rather than an
+	 * NPE.
+	 */
 	protected final GLJPanel gljpanel;
+
+	/** Set when {@link #gljpanel} is {@code null}: why OpenGL initialization failed. */
+	private final Throwable glInitError;
+
 	protected GLU glu; // glu utilities
 	
 	// Navigation step used by keyboard panning and mouse-wheel zoom.
@@ -105,11 +119,19 @@ public class Panel3D extends JPanel implements GLEventListener {
 	// the list of 3D items to be drawn
 	protected Vector<Item3D> _itemList = new Vector<>();
 
+	/**
+	 * True after {@link #createInitialItems()} has been invoked for this panel.
+	 *
+	 * <p>
+	 * Initial items are created when the first OpenGL context is initialized,
+	 * rather than from the constructor. This avoids invoking an overridable
+	 * method while a subclass is only partially constructed.
+	 * </p>
+	 */
+	private boolean _initialItemsCreated;
+
 	// listen for mouse events
 	protected MouseAdapter3D _mouseAdapter;
-
-	// listen for key events
-	protected KeyAdapter3D _keyAdapter;
 
 	protected String _rendererStr;
 
@@ -146,8 +168,9 @@ public class Panel3D extends JPanel implements GLEventListener {
 	 * The constructor creates the {@link GLJPanel}, registers this object as the
 	 * {@link GLEventListener}, installs the MDI-3D keyboard and mouse adapters,
 	 * and creates any optional border components returned by the directional hook
-	 * methods. The initial scene contents are then created by calling
-	 * {@link #createInitialItems()}.
+	 * methods. Initial scene contents are created later, when the first OpenGL
+	 * context is initialized, by calling {@link #createInitialItems()}. Deferring
+	 * scene creation avoids invoking an overridable method from this constructor.
 	 * </p>
 	 *
 	 * @param angleX initial rotation angle about the x axis, in degrees
@@ -177,46 +200,109 @@ public class Panel3D extends JPanel implements GLEventListener {
 
 		setLayout(new BorderLayout(0, 0));
 
-		GLProfile glprofile;
-		if (GLProfile.isAvailable(GLProfile.GL2)) {
-			glprofile = GLProfile.get(GLProfile.GL2);
-		} else {
-			glprofile = GLProfile.getMaxFixedFunc(true);
+		// GL initialization can fail on a system with no usable OpenGL (a
+		// headless CI runner, a remote desktop session without GPU passthrough,
+		// a misconfigured or missing driver). Rather than let that propagate out
+		// of a view's constructor as a raw JOGL exception -- which previously
+		// crashed the whole view with a stack trace and no indication of what
+		// went wrong -- fall back to gljpanel == null and show an explanatory
+		// panel in its place. Every other method in this class that touches
+		// gljpanel already null-checks it (refresh, softRefresh,
+		// reinitGLContext), so this is the only place that needed to change.
+		GLJPanel panel;
+		Throwable initError;
+		try {
+			GLProfile profile;
+			if (GLProfile.isAvailable(GLProfile.GL2)) {
+				profile = GLProfile.get(GLProfile.GL2);
+			} else {
+				profile = GLProfile.getMaxFixedFunc(true);
+			}
+			glprofile = profile;
+
+			glcapabilities = new GLCapabilities(profile);
+			glcapabilities.setRedBits(8);
+			glcapabilities.setBlueBits(8);
+			glcapabilities.setGreenBits(8);
+			glcapabilities.setAlphaBits(8);
+			glcapabilities.setDepthBits(32);
+
+			panel = new GLJPanel(glcapabilities);
+			panel.addGLEventListener(this);
+			initError = null;
+		} catch (Throwable t) {
+			// Deliberately broad: JOGL/GlueGen can fail with GLException,
+			// UnsatisfiedLinkError, or other platform-specific throwables
+			// depending on what's missing, and every one of them should land
+			// here rather than abort view construction.
+			panel = null;
+			initError = t;
 		}
-
-		glcapabilities = new GLCapabilities(glprofile);
-		glcapabilities.setRedBits(8);
-		glcapabilities.setBlueBits(8);
-		glcapabilities.setGreenBits(8);
-		glcapabilities.setAlphaBits(8);
-		glcapabilities.setDepthBits(32);
-
-		gljpanel = new GLJPanel(glcapabilities);
-		gljpanel.addGLEventListener(this);
+		gljpanel = panel;
+		glInitError = initError;
 
 		safeAdd(addNorth(), BorderLayout.NORTH);
 		safeAdd(addSouth(), BorderLayout.SOUTH);
 		safeAdd(addEast(), BorderLayout.EAST);
 		safeAdd(addWest(), BorderLayout.WEST);
 
-		add(gljpanel, BorderLayout.CENTER);
+		if (gljpanel != null) {
+			add(gljpanel, BorderLayout.CENTER);
 
-		new KeyBindings3D(this);
+			new KeyBindings3D(this);
 
-		_mouseAdapter = new MouseAdapter3D(this);
-		gljpanel.addMouseListener(_mouseAdapter);
-		gljpanel.addMouseMotionListener(_mouseAdapter);
-		gljpanel.addMouseWheelListener(_mouseAdapter);
+			_mouseAdapter = new MouseAdapter3D(this);
+			gljpanel.addMouseListener(_mouseAdapter);
+			gljpanel.addMouseMotionListener(_mouseAdapter);
+			gljpanel.addMouseWheelListener(_mouseAdapter);
+		} else {
+			add(buildUnavailablePanel(glInitError), BorderLayout.CENTER);
+		}
 
-		// Set initial orientation using the same semantics as before:
-		// reset then apply rotateX/Y/Z in that order.
+		// Establish the initial orientation without requesting intermediate
+		// refreshes. In particular, do not invoke any overridable scene-building
+		// methods while subclasses are still under construction.
 		loadIdentityMatrix();
-		rotateX(angleX);
-		rotateY(angleY);
-		rotateZ(angleZ);
+		rotateXInternal(angleX);
+		rotateYInternal(angleY);
+		rotateZInternal(angleZ);
 
-		createInitialItems();
+	}
 
+	/**
+	 * Whether OpenGL was successfully initialized for this panel.
+	 *
+	 * @return {@code true} if this panel has a working {@link GLJPanel};
+	 *         {@code false} if GL initialization failed and {@link #getGLJPanel()}
+	 *         returns {@code null}
+	 */
+	public boolean isGLAvailable() {
+		return gljpanel != null;
+	}
+
+	/**
+	 * The reason OpenGL initialization failed, if it did.
+	 *
+	 * @return the throwable caught during GL setup, or {@code null} if
+	 *         {@link #isGLAvailable()} is {@code true}
+	 */
+	public Throwable getGLInitError() {
+		return glInitError;
+	}
+
+	// Build the explanatory panel shown in place of the GLJPanel when OpenGL
+	// could not be initialized.
+	private static JComponent buildUnavailablePanel(Throwable cause) {
+		String reason = (cause == null) ? "unknown error" : cause.getClass().getSimpleName()
+				+ (cause.getMessage() != null ? ": " + cause.getMessage() : "");
+
+		JLabel label = new JLabel("<html><div style='text-align:center;'>"
+				+ "3D rendering is unavailable on this system.<br>"
+				+ "OpenGL could not be initialized.<br>"
+				+ "<font size='-1' color='gray'>" + reason + "</font></div></html>",
+				SwingConstants.CENTER);
+
+		return DialogUtils.paddedPanel(24, 24, label);
 	}
 
 	/**
@@ -225,8 +311,20 @@ public class Panel3D extends JPanel implements GLEventListener {
 	 * <p>
 	 * The default implementation is empty. Subclasses normally override this
 	 * method to populate the panel with axes, lines, surfaces, point clouds, or
-	 * other {@link Item3D} objects. This method is called by the constructor after
-	 * the OpenGL panel and input adapters have been created.
+	 * other {@link Item3D} objects.
+	 * </p>
+	 *
+	 * <p>
+	 * The method is invoked once, when the panel's first OpenGL context has been
+	 * initialized. It is deliberately not called from the {@code Panel3D}
+	 * constructor because subclasses may depend on fields that are not initialized
+	 * until after the superclass constructor has returned.
+	 * </p>
+	 *
+	 * <p>
+	 * A later OpenGL-context recreation does not rebuild the logical item list.
+	 * Individual items that own OpenGL resources are responsible for recreating
+	 * those resources as necessary.
 	 * </p>
 	 */
 	public void createInitialItems() {
@@ -378,6 +476,16 @@ public class Panel3D extends JPanel implements GLEventListener {
 	 * @param angleDeg rotation angle, in degrees
 	 */
 	public void rotateX(float angleDeg) {
+		rotateXInternal(angleDeg);
+		refresh();
+	}
+
+	/**
+	 * Apply an x-axis rotation without requesting a refresh.
+	 *
+	 * @param angleDeg rotation angle, in degrees
+	 */
+	private void rotateXInternal(float angleDeg) {
 		float rad = (float) Math.toRadians(angleDeg);
 		Quat dq = Quat.fromAxisAngle(1f, 0f, 0f, rad);
 
@@ -385,8 +493,6 @@ public class Panel3D extends JPanel implements GLEventListener {
 			_orientation.set(dq.mul(_orientation));
 			_orientation.normalizeInPlace();
 		}
-
-		refresh();
 	}
 
 	/**
@@ -395,6 +501,16 @@ public class Panel3D extends JPanel implements GLEventListener {
 	 * @param angleDeg rotation angle, in degrees
 	 */
 	public void rotateY(float angleDeg) {
+		rotateYInternal(angleDeg);
+		refresh();
+	}
+
+	/**
+	 * Apply a y-axis rotation without requesting a refresh.
+	 *
+	 * @param angleDeg rotation angle, in degrees
+	 */
+	private void rotateYInternal(float angleDeg) {
 		float rad = (float) Math.toRadians(angleDeg);
 		Quat dq = Quat.fromAxisAngle(0f, 1f, 0f, rad);
 
@@ -402,8 +518,6 @@ public class Panel3D extends JPanel implements GLEventListener {
 			_orientation.set(dq.mul(_orientation));
 			_orientation.normalizeInPlace();
 		}
-
-		refresh();
 	}
 
 	/**
@@ -412,6 +526,16 @@ public class Panel3D extends JPanel implements GLEventListener {
 	 * @param angleDeg rotation angle, in degrees
 	 */
 	public void rotateZ(float angleDeg) {
+		rotateZInternal(angleDeg);
+		refresh();
+	}
+
+	/**
+	 * Apply a z-axis rotation without requesting a refresh.
+	 *
+	 * @param angleDeg rotation angle, in degrees
+	 */
+	private void rotateZInternal(float angleDeg) {
 		float rad = (float) Math.toRadians(angleDeg);
 		Quat dq = Quat.fromAxisAngle(0f, 0f, 1f, rad);
 
@@ -419,8 +543,6 @@ public class Panel3D extends JPanel implements GLEventListener {
 			_orientation.set(dq.mul(_orientation));
 			_orientation.normalizeInPlace();
 		}
-
-		refresh();
 	}
 
 	/**
@@ -568,6 +690,7 @@ public class Panel3D extends JPanel implements GLEventListener {
 	 */
 	@Override
 	public void init(GLAutoDrawable drawable) {
+
 		glu = new GLU();
 		GL2 gl = drawable.getGL().getGL2();
 
@@ -593,6 +716,18 @@ public class Panel3D extends JPanel implements GLEventListener {
 		gl.glHint(GL.GL_LINE_SMOOTH_HINT, GL.GL_DONT_CARE);
 
 		gl.glEnable(GL3.GL_PROGRAM_POINT_SIZE);
+
+
+		/*
+		 * Build the logical scene only after the Panel3D and its enclosing view have
+		 * completed construction and a usable GL context exists. JOGL may invoke
+		 * init() again if the context is recreated, so guard against duplicating the
+		 * scene.
+		 */
+		if (!_initialItemsCreated) {
+			_initialItemsCreated = true;
+			createInitialItems();
+		}
 	}
 
 	/**
@@ -723,8 +858,13 @@ public class Panel3D extends JPanel implements GLEventListener {
 	 */
 	public void addItem(Item3D item) {
 		if (item != null) {
-			_itemList.remove(item);
-			_itemList.add(item);
+			// Atomic with respect to display()'s synchronized(_itemList) snapshot:
+			// without this, a concurrent snapshot taken between the remove and the
+			// add would observe the item as transiently missing.
+			synchronized (_itemList) {
+				_itemList.remove(item);
+				_itemList.add(item);
+			}
 		}
 	}
 
@@ -740,8 +880,10 @@ public class Panel3D extends JPanel implements GLEventListener {
 	 */
 	public void addItem(int index, Item3D item) {
 		if (item != null) {
-			_itemList.remove(item);
-			_itemList.add(index, item);
+			synchronized (_itemList) {
+				_itemList.remove(item);
+				_itemList.add(index, item);
+			}
 		}
 	}
 
@@ -1100,14 +1242,35 @@ public class Panel3D extends JPanel implements GLEventListener {
 	 * Dispose of OpenGL resources associated with this listener.
 	 *
 	 * <p>
-	 * The current implementation does not allocate explicit GL resources that
-	 * require manual release, so this method is intentionally empty.
+	 * {@code Panel3D} itself holds no explicit GL resources, but items on the
+	 * panel may — for example a text-drawing item's lazily-created JOGL
+	 * {@code TextRenderer}, which owns a GPU texture atlas. This gives every
+	 * item (and its children) a chance to release those via {@link
+	 * Item3D#disposeItem(GLAutoDrawable)} before the GL context goes away, so
+	 * repeatedly opening and closing 3D views doesn't leak texture memory.
 	 * </p>
 	 *
 	 * @param drawable JOGL drawable being disposed
 	 */
 	@Override
 	public void dispose(GLAutoDrawable drawable) {
-	    // no resources to release
+
+		final java.util.List<Item3D> snapshot;
+		synchronized (_itemList) {
+			snapshot = new java.util.ArrayList<>(_itemList);
+		}
+		for (Item3D item : snapshot) {
+			if (item == null) {
+				continue;
+			}
+			// Defensive: one item's dispose() throwing must not abort disposal of
+			// the rest, nor propagate out of this GLEventListener callback and
+			// potentially corrupt JOGL's dispose/reinit sequence for the panel.
+			try {
+				item.disposeItem(drawable);
+			} catch (RuntimeException e) {
+				e.printStackTrace();
+			}
+		}
 	}
 }

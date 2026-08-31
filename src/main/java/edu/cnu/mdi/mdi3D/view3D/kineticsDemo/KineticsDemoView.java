@@ -13,6 +13,7 @@ import edu.cnu.mdi.sim.SimulationContext;
 import edu.cnu.mdi.sim.SimulationEngineConfig;
 import edu.cnu.mdi.sim.SimulationState;
 import edu.cnu.mdi.util.PropertyUtils;
+import edu.cnu.mdi.view.AbstractViewInfo;
 import edu.cnu.mdi.view.ViewConfiguration;
 import edu.cnu.mdi.view.ViewPropertiesBuilder;
 import edu.cnu.mdi.view.VirtualView;
@@ -120,6 +121,11 @@ public class KineticsDemoView extends SimulationView3D {
 	 */
 	public static ViewConfiguration<KineticsDemoView> getConfiguration() {
 		return ViewConfiguration.lazy(TITLE, KineticsDemoView::new, 0, 0, 0, VirtualView.CENTER);
+	}
+
+	@Override
+	public AbstractViewInfo getViewInfo() {
+		return new KineticsDemoViewInfo();
 	}
 
 	// Helper method to create the simulation instance with default parameters.

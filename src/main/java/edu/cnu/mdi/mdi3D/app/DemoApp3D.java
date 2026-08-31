@@ -3,10 +3,12 @@ package edu.cnu.mdi.mdi3D.app;
 
 import edu.cnu.mdi.app.BaseMDIApplication;
 import edu.cnu.mdi.log.Log;
+import edu.cnu.mdi.mdi3D.view2D.DrawingDemoView;
 import edu.cnu.mdi.mdi3D.view3D.aizawaDemo.AizawaDemoView;
 import edu.cnu.mdi.mdi3D.view3D.geoslice.GeometrySlice3DView;
 import edu.cnu.mdi.mdi3D.view3D.globe.GlobeView3D;
 import edu.cnu.mdi.mdi3D.view3D.kineticsDemo.KineticsDemoView;
+import edu.cnu.mdi.mdi3D.view3D.logoDemo.LogoDemoView;
 import edu.cnu.mdi.mdi3D.view3D.scatterDemo.ScatterPlot3DDemo;
 import edu.cnu.mdi.util.Environment;
 import edu.cnu.mdi.util.PropertyUtils;
@@ -54,6 +56,8 @@ public class DemoApp3D extends BaseMDIApplication {
 	private AizawaDemoView aizawaView;
 	private ScatterPlot3DDemo scatterPlot3DView;
 	private GeometrySlice3DView geometrySlice3DView;
+	private LogoDemoView logoView;
+	private DrawingDemoView drawingDemoView;
 
 	/**
 	 * Private constructor: use {@link #getInstance()}.
@@ -69,8 +73,20 @@ public class DemoApp3D extends BaseMDIApplication {
 	
 	@Override
 	protected int getVirtualDesktopColumns() {
-		return 6;
+		return 7;
 	} // opts in; 0 = disabled
+
+	// This is a single-window demo tool, not an app embedding MDI inside
+	// something larger, so the native close button should behave the same
+	// as a Quit action: both should actually end the process. Without this,
+	// disposing every window does not by itself terminate the JVM -- AWT's
+	// own event-dispatch/shutdown threads are not daemon threads -- which is
+	// why the process (and its Dock icon on macOS) used to linger after the
+	// native close button until something else forced an exit.
+	@Override
+	protected boolean exitOnClose() {
+		return true;
+	}
 
 
 	/**
@@ -80,7 +96,7 @@ public class DemoApp3D extends BaseMDIApplication {
 	 */
 	public static DemoApp3D getInstance() {
 		if (INSTANCE == null) {
-			INSTANCE = new DemoApp3D(PropertyUtils.TITLE, "Demo Application of MDI Views",
+			INSTANCE = new DemoApp3D(PropertyUtils.TITLE, "Demo Application of MDI 3D Views",
 					PropertyUtils.BACKGROUNDIMAGE,
 					Environment.MDI_RESOURCE_PATH + "images/mdilogo.png",
 					PropertyUtils.FRACTION, 0.8);
@@ -115,16 +131,24 @@ public class DemoApp3D extends BaseMDIApplication {
 		
 		// geometry slice demo
 		geometrySlice3DView = GeometrySlice3DView.createGeometrySlice3DView();
+
+		// rotating, lit MDI logo demo
+		logoView = LogoDemoView.createLogoView();
+
+		// ordinary 2D view, included to show 2D and 3D views coexisting
+		drawingDemoView = DrawingDemoView.createDrawingDemoView();
 	}
 
 	// put the views in the virtual desktop in a reasonable default layout.
 	@Override
 	protected void defaultViewLayout() {
 		virtualViewMove(kineticsView, 0, VirtualView.TOPCENTER);
+		virtualViewMove(logoView, 1, VirtualView.CENTER);
 		virtualViewMove(aizawaView, 2, VirtualView.CENTER);
 		virtualViewMove(scatterPlot3DView, 3, VirtualView.BOTTOMCENTER);
 		virtualViewMove(logView, 4, VirtualView.UPPERLEFT);
 		virtualViewMove(geometrySlice3DView, 5, VirtualView.CENTER);
+		virtualViewMove(drawingDemoView, 6, VirtualView.CENTER);
 	}
 
 

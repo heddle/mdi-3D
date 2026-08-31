@@ -8,6 +8,12 @@ import com.jogamp.opengl.GLAutoDrawable;
 import edu.cnu.mdi.mdi3D.panel.Panel3D;
 import edu.cnu.mdi.mdi3D.panel.Support3D;
 
+/**
+ * A composite set of three Cartesian {@link Axis3D} children (x, y, and z),
+ * built from either explicit axis limits or a {@code [xmin, xmax, ymin, ymax,
+ * zmin, zmax]} array. {@code Axes3D} itself draws nothing; each child axis
+ * draws its own line, tick marks, and labels.
+ */
 public class Axes3D extends Item3D {
 
     /**
@@ -15,6 +21,8 @@ public class Axes3D extends Item3D {
 	 *
 	 * @param panel3D   the owner 3D panel
 	 * @param limits    the limits as [xmin, xmax, ymin, ymax, zmin, zmax]
+	 * @param labels    axis labels as [xLabel, yLabel, zLabel]; may be {@code null},
+	 *                  or individual entries may be {@code null}, to use the default "x"/"y"/"z"
 	 * @param color     the color
 	 * @param lineWidth the line width
 	 * @param numTicksX the number of ticks in x
@@ -36,6 +44,8 @@ public class Axes3D extends Item3D {
 	 *
 	 * @param panel3D   the owner 3D panel
 	 * @param limits    the limits as [xmin, xmax, ymin, ymax, zmin, zmax]
+	 * @param labels    axis labels as [xLabel, yLabel, zLabel]; may be {@code null},
+	 *                  or individual entries may be {@code null}, to use the default "x"/"y"/"z"
 	 * @param zoff      a z offset
 	 * @param color     the color
 	 * @param lineWidth the line width
@@ -83,6 +93,8 @@ public class Axes3D extends Item3D {
 	 * @param ymax      the maximum value for y
 	 * @param zmin      the minimum value for z
 	 * @param zmax      the maximum value for z
+	 * @param labels    axis labels as [xLabel, yLabel, zLabel]; may be {@code null},
+	 *                  or individual entries may be {@code null}, to use the default "x"/"y"/"z"
 	 * @param color     the color
 	 * @param lineWidth the line width
 	 * @param numTicksX the number of ticks in x
@@ -110,6 +122,8 @@ public class Axes3D extends Item3D {
 	 * @param ymax      the maximum value for y
 	 * @param zmin      the minimum value for z
 	 * @param zmax      the maximum value for z
+	 * @param labels    axis labels as [xLabel, yLabel, zLabel]; may be {@code null},
+	 *                  or individual entries may be {@code null}, to use the default "x"/"y"/"z"
 	 * @param zoff      a z offset
 	 * @param color     the color
 	 * @param lineWidth the line width

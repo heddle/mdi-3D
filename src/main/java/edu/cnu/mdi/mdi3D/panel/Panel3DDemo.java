@@ -2,12 +2,18 @@ package edu.cnu.mdi.mdi3D.panel;
 
 import java.awt.BorderLayout;
 import java.awt.Color;
+import java.awt.Dimension;
 import java.awt.Font;
+import java.awt.GraphicsEnvironment;
+import java.awt.Rectangle;
+import java.awt.event.KeyEvent;
 import java.awt.event.WindowAdapter;
 import java.awt.event.WindowEvent;
 
+import javax.swing.JComponent;
 import javax.swing.JFrame;
 
+import edu.cnu.mdi.mdi3D.adapter3D.KeyboardLabel;
 import edu.cnu.mdi.mdi3D.item3D.Axes3D;
 import edu.cnu.mdi.mdi3D.item3D.Cube;
 import edu.cnu.mdi.mdi3D.item3D.Cylinder;
@@ -15,6 +21,13 @@ import edu.cnu.mdi.mdi3D.item3D.PointSet3D;
 import edu.cnu.mdi.mdi3D.item3D.Sphere;
 import edu.cnu.mdi.mdi3D.item3D.Triangle3D;
 
+/**
+ * A standalone, minimal {@link JFrame} that hosts a bare {@link Panel3D} with
+ * a handful of sample {@link edu.cnu.mdi.mdi3D.item3D.Item3D} shapes and a
+ * {@link KeyboardLabel} showing the active key bindings. Unlike the MDI demo
+ * views under {@code view3D}, this frame is not an MDI view — it exercises
+ * {@link Panel3D} directly, outside the MDI application/desktop framework.
+ */
 @SuppressWarnings("serial")
 public class Panel3DDemo extends JFrame {
 
@@ -32,8 +45,21 @@ public class Panel3DDemo extends JFrame {
 		};
 
 		addWindowListener(windowAdapter);
-		setBounds(200, 100, 900, 700);
+		Rectangle usable = GraphicsEnvironment.getLocalGraphicsEnvironment()
+				.getMaximumWindowBounds();
+		setSize(demoWindowSize(usable));
+		setLocationRelativeTo(null);
 
+	}
+
+	/** Return a screen-relative initial size for the standalone demo window. */
+	static Dimension demoWindowSize(Rectangle usableBounds) {
+		if (usableBounds == null) {
+			return new Dimension(1, 1);
+		}
+		return new Dimension(
+				Math.max(1, (int) Math.round(usableBounds.width * 0.65)),
+				Math.max(1, (int) Math.round(usableBounds.height * 0.75)));
 	}
 
 	// Create a Panel3D with some items just for demo
@@ -89,9 +115,28 @@ public class Panel3DDemo extends JFrame {
 			public float getZStep() {
 				return (zmax - zmin) / 50f;
 			}
+
+			// Makes the L/R/U/D/J/K/1-4 keyboard shortcuts (see KeyBindings3D)
+			// discoverable instead of living only in source comments: each
+			// button below fires the exact same handler a keystroke would.
+			@Override
+			protected JComponent addSouth() {
+				return new KeyboardLabel(this,
+						"pan/dolly, or jump to a preset view (Shift+X/Y/Z reverses rotation)",
+						new String[] { "L", "R", "U", "D", "J", "K", "1", "2", "3", "4" },
+						new int[] { KeyEvent.VK_L, KeyEvent.VK_R, KeyEvent.VK_U, KeyEvent.VK_D,
+								KeyEvent.VK_J, KeyEvent.VK_K,
+								KeyEvent.VK_1, KeyEvent.VK_2, KeyEvent.VK_3, KeyEvent.VK_4 },
+						new boolean[] { false, false, false, false, false, false, false, false, false, false });
+			}
 		};
 	}
 
+	/**
+	 * Entry point: launches the demo frame on the Swing EDT.
+	 *
+	 * @param args ignored
+	 */
 	public static void main(String[] args) {
 		javax.swing.SwingUtilities.invokeLater(new Runnable() {
 			@Override

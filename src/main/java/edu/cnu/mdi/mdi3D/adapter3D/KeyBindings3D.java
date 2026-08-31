@@ -3,6 +3,7 @@ package edu.cnu.mdi.mdi3D.adapter3D;
 import java.awt.Component;
 import java.awt.KeyboardFocusManager;
 import java.awt.event.ActionEvent;
+import java.awt.event.InputEvent;
 import java.awt.event.KeyEvent;
 
 import javax.swing.AbstractAction;
@@ -12,129 +13,91 @@ import javax.swing.JComponent;
 import javax.swing.KeyStroke;
 import javax.swing.text.JTextComponent;
 
-
 import edu.cnu.mdi.mdi3D.panel.Panel3D;
 
+/**
+ * Installs the standard MDI-3D keyboard bindings on a {@link Panel3D} via
+ * Swing's {@code InputMap}/{@code ActionMap}, so they work regardless of
+ * which child component currently has keyboard focus within the panel's
+ * focused window (unlike a plain {@code KeyListener}, which only fires when
+ * the panel itself has focus).
+ * <p>
+ * Every binding — including the shifted variants (larger pan/dolly step,
+ * reversed rotation) — routes through the single shared {@link
+ * KeyAdapter3D#handleVK} method, the same one {@link KeyboardLabel}'s
+ * on-screen legend buttons call. Key handling logic therefore lives in
+ * exactly one place; this class only registers key strokes.
+ * </p>
+ */
 public class KeyBindings3D {
 
-	private Panel3D _panel3D;
-	private static final float DTHETA = 2f; // degrees
+	// The fixed set of virtual key codes this class binds, unshifted and shifted.
+	private static final int[] VK_CODES = {
+			KeyEvent.VK_L, KeyEvent.VK_R, KeyEvent.VK_U, KeyEvent.VK_D,
+			KeyEvent.VK_J, KeyEvent.VK_K,
+			KeyEvent.VK_X, KeyEvent.VK_Y, KeyEvent.VK_Z,
+			KeyEvent.VK_1, KeyEvent.VK_2, KeyEvent.VK_3, KeyEvent.VK_4
+	};
 
+	/**
+	 * Install the standard key bindings on the given panel.
+	 *
+	 * @param panel the panel to receive the bindings
+	 */
 	public KeyBindings3D(Panel3D panel) {
-
-		_panel3D = panel;
 
 		InputMap inputMap = panel.getInputMap(JComponent.WHEN_IN_FOCUSED_WINDOW);
 		ActionMap actionMap = panel.getActionMap();
 
-		// other actions
-		inputMap.put(KeyStroke.getKeyStroke(KeyEvent.VK_J, 0), "j");
-		inputMap.put(KeyStroke.getKeyStroke(KeyEvent.VK_K, 0), "k");
-		inputMap.put(KeyStroke.getKeyStroke(KeyEvent.VK_U, 0), "u");
-		inputMap.put(KeyStroke.getKeyStroke(KeyEvent.VK_D, 0), "d");
-		inputMap.put(KeyStroke.getKeyStroke(KeyEvent.VK_L, 0), "l");
-		inputMap.put(KeyStroke.getKeyStroke(KeyEvent.VK_R, 0), "r");
-		inputMap.put(KeyStroke.getKeyStroke(KeyEvent.VK_X, 0), "x");
-		inputMap.put(KeyStroke.getKeyStroke(KeyEvent.VK_Y, 0), "y");
-		inputMap.put(KeyStroke.getKeyStroke(KeyEvent.VK_Z, 0), "z");
-		inputMap.put(KeyStroke.getKeyStroke(KeyEvent.VK_1, 0), "1");
-		inputMap.put(KeyStroke.getKeyStroke(KeyEvent.VK_2, 0), "2");
-		inputMap.put(KeyStroke.getKeyStroke(KeyEvent.VK_3, 0), "3");
-		inputMap.put(KeyStroke.getKeyStroke(KeyEvent.VK_4, 0), "4");
+		for (int vk : VK_CODES) {
+			bind(inputMap, actionMap, panel, vk, 0, false);
+			bind(inputMap, actionMap, panel, vk, InputEvent.SHIFT_DOWN_MASK, true);
+		}
 
-		actionMap.put("u", new KeyAction("u"));
-		actionMap.put("d", new KeyAction("d"));
-		actionMap.put("l", new KeyAction("l"));
-		actionMap.put("r", new KeyAction("r"));
+		// F5: force an immediate redraw, independent of the handleVK command set.
+		inputMap.put(KeyStroke.getKeyStroke(KeyEvent.VK_F5, 0), "refresh");
+		actionMap.put("refresh", new AbstractAction() {
+			private static final long serialVersionUID = 1L;
 
-		actionMap.put("j", new KeyAction("j"));
-		actionMap.put("k", new KeyAction("k"));
-		actionMap.put("x", new KeyAction("x"));
-		actionMap.put("y", new KeyAction("y"));
-		actionMap.put("z", new KeyAction("z"));
-		actionMap.put("1", new KeyAction("1"));
-		actionMap.put("2", new KeyAction("2"));
-		actionMap.put("3", new KeyAction("3"));
-		actionMap.put("4", new KeyAction("4"));
+			@Override
+			public void actionPerformed(ActionEvent e) {
+				panel.refresh();
+			}
+		});
 	}
 
-	@SuppressWarnings("serial")
-	public class KeyAction extends AbstractAction {
+	// Register one key stroke (with the given modifiers) and route it through
+	// KeyAdapter3D.handleVK via a shared Action keyed by (vkCode, shifted).
+	private static void bind(InputMap inputMap, ActionMap actionMap, Panel3D panel, int vk, int modifiers,
+			boolean shifted) {
+		String actionKey = vk + (shifted ? "-shift" : "");
+		inputMap.put(KeyStroke.getKeyStroke(vk, modifiers), actionKey);
+		actionMap.put(actionKey, new KeyAction(panel, vk, shifted));
+	}
 
-		public KeyAction(String name) {
-			super(name);
-			putValue(ACTION_COMMAND_KEY, name);
+	// Routes one bound key stroke to KeyAdapter3D.handleVK, ignoring key events
+	// while a text field has focus so typing "x", "1", etc. into a control
+	// doesn't also rotate or reposition the scene.
+	@SuppressWarnings("serial")
+	private static final class KeyAction extends AbstractAction {
+
+		private final Panel3D panel3D;
+		private final int vkCode;
+		private final boolean shifted;
+
+		KeyAction(Panel3D panel3D, int vkCode, boolean shifted) {
+			this.panel3D = panel3D;
+			this.vkCode = vkCode;
+			this.shifted = shifted;
 		}
 
 		@Override
 		public void actionPerformed(ActionEvent e) {
-			Component component = KeyboardFocusManager.getCurrentKeyboardFocusManager().getFocusOwner();
-
-			if ((component != null) && (component instanceof JTextComponent)) {
+			Component focusOwner = KeyboardFocusManager.getCurrentKeyboardFocusManager().getFocusOwner();
+			if (focusOwner instanceof JTextComponent) {
 				return;
 			}
-
-			String command = e.getActionCommand();
-
-			float step = _panel3D.getZStep();
-
-			if ("u".equals(command)) {
-				_panel3D.deltaY(step);
-				_panel3D.refresh();
-			} else if ("d".equals(command)) {
-				_panel3D.deltaY(-step);
-				_panel3D.refresh();
-			} else if ("l".equals(command)) {
-				_panel3D.deltaX(-step);
-				_panel3D.refresh();
-			} else if ("r".equals(command)) {
-				_panel3D.deltaX(step);
-				_panel3D.refresh();
-			} else if ("j".equals(command)) {
-				_panel3D.deltaZ(step);
-				_panel3D.refresh();
-			} else if ("k".equals(command)) {
-				_panel3D.deltaZ(-step);
-				_panel3D.refresh();
-			} else if ("x".equals(command)) {
-				_panel3D.rotateX(DTHETA);
-				_panel3D.refresh();
-			} else if ("y".equals(command)) {
-				_panel3D.rotateY(DTHETA);
-				_panel3D.refresh();
-			} else if ("z".equals(command)) {
-				_panel3D.rotateZ(DTHETA);
-				_panel3D.refresh();
-			} else if ("X".equals(command)) {
-				_panel3D.rotateX(-DTHETA);
-				_panel3D.refresh();
-			} else if ("Y".equals(command)) {
-				_panel3D.rotateY(-DTHETA);
-				_panel3D.refresh();
-			} else if ("Z".equals(command)) {
-				_panel3D.rotateZ(-DTHETA);
-				_panel3D.refresh();
-			}
-
-			else if ("1".equals(command)) {
-				_panel3D.loadIdentityMatrix();
-				_panel3D.rotateX(180f);
-				_panel3D.rotateY(90f);
-				_panel3D.refresh();
-			} else if ("2".equals(command)) {
-				_panel3D.loadIdentityMatrix();
-				_panel3D.rotateZ(-90f);
-				_panel3D.rotateY(-90f);
-				_panel3D.refresh();
-			} else if ("3".equals(command)) {
-				_panel3D.loadIdentityMatrix();
-				_panel3D.refresh();
-			} else if ("4".equals(command)) {
-				_panel3D.loadIdentityMatrix();
-				_panel3D.rotateY(180f);
-				_panel3D.refresh();
-			}
-
+			KeyAdapter3D.handleVK(panel3D, vkCode, shifted);
 		}
 	}
 }

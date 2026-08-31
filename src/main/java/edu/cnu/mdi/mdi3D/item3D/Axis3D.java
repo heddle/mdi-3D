@@ -11,6 +11,12 @@ import com.jogamp.opengl.util.awt.TextRenderer;
 import edu.cnu.mdi.format.DoubleFormat;
 import edu.cnu.mdi.mdi3D.panel.Panel3D;
 
+/**
+ * A single Cartesian axis: a {@link Line3D} from {@code vmin} to {@code vmax}
+ * along one of the {@link AxisType} directions, with major tick marks (added
+ * as {@link Line3D} children) and a lazily-created {@link TextRenderer} for
+ * the axis label and per-tick value labels.
+ */
 public class Axis3D extends Line3D {
 
 	// the type of axis
@@ -50,8 +56,8 @@ public class Axis3D extends Line3D {
 	 * Create a coordinate axis
 	 *
 	 * @param panel3D   the owner 3D panel
-	 *
 	 * @param type      the type
+	 * @param label     axis label; if {@code null}, defaults to "x"/"y"/"z" based on {@code type}
 	 * @param vmin      the minimum value
 	 * @param vmax      the maximum value
 	 * @param color     the color of the axes
@@ -60,7 +66,7 @@ public class Axis3D extends Line3D {
 	 * @param tickColor the color of the ticks
 	 * @param textColor the text color
 	 * @param font      the text font
-	 * @param numdec    the number of decimals to display
+	 * @param numDec    the number of decimals to display
 	 */
 	public Axis3D(Panel3D panel3D, AxisType type, String label, float vmin, float vmax, Color color, float lineWidth,
 			int numTicks, Color tickColor, Color textColor, Font font, int numDec) {
@@ -71,17 +77,18 @@ public class Axis3D extends Line3D {
 	 * Create a coordinate axis
 	 *
 	 * @param panel3D   the owner 3D panel
-	 *
 	 * @param type      the type
+	 * @param label     axis label; if {@code null}, defaults to "x"/"y"/"z" based on {@code type}
 	 * @param vmin      the minimum value
 	 * @param vmax      the maximum value
+	 * @param offset    value added to each tick label (does not affect drawn geometry)
 	 * @param color     the color of the axes
 	 * @param lineWidth the line width
 	 * @param numTicks  the number of ticks
 	 * @param tickColor the color of the ticks
 	 * @param textColor the text color
 	 * @param font      the text font
-	 * @param numdec    the number of decimals to display
+	 * @param numDec    the number of decimals to display
 	 */
 	public Axis3D(Panel3D panel3D, AxisType type, String label, float vmin, float vmax, float offset, Color color,
 			float lineWidth, int numTicks, Color tickColor, Color textColor, Font font, int numDec) {
@@ -154,6 +161,15 @@ public class Axis3D extends Line3D {
 			if (_lines2[i] != null) {
 				addChild(_lines2[i]);
 			}
+		}
+	}
+
+	/** Releases the lazily-created tick-label {@link TextRenderer} and its GPU texture atlas. */
+	@Override
+	protected void dispose(GLAutoDrawable drawable) {
+		if (_renderer != null) {
+			_renderer.dispose();
+			_renderer = null;
 		}
 	}
 
