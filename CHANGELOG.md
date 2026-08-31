@@ -10,7 +10,9 @@ No changelog was kept during development prior to this file, so the entry
 below has been reconstructed from the commit history since the `v1.0.0c`
 tag — effectively the whole feature-development arc of this project to date.
 
-## [Unreleased] — targeting 1.0.1
+## [Unreleased]
+
+## [1.0.1] - 2026-08-31
 
 ### Added
 
@@ -60,4 +62,5 @@ tag — effectively the whole feature-development arc of this project to date.
 - Complete Javadoc coverage and new unit tests added as part of 1.1.0
   release prep.
 
-[Unreleased]: https://github.com/heddle/mdi-3D/compare/v1.0.0c...develop
+[Unreleased]: https://github.com/heddle/mdi-3D/compare/v1.0.1...develop
+[1.0.1]: https://github.com/heddle/mdi-3D/compare/v1.0.0c...v1.0.1
