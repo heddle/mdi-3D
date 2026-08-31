@@ -775,6 +775,11 @@ public class Panel3D extends JPanel implements GLEventListener {
 
 	/**
 	 * Increment the current x translation.
+	 * <p>
+	 * Unlike {@link #rotateX(float)}, this does <em>not</em> call {@link #refresh()}
+	 * itself — callers (e.g. {@code MouseAdapter3D}, {@code KeyAdapter3D}) must
+	 * request a refresh explicitly after the last delta in a batch.
+	 * </p>
 	 *
 	 * @param dx change in x translation
 	 */
@@ -784,6 +789,11 @@ public class Panel3D extends JPanel implements GLEventListener {
 
 	/**
 	 * Increment the current y translation.
+	 * <p>
+	 * Unlike {@link #rotateY(float)}, this does <em>not</em> call {@link #refresh()}
+	 * itself — callers (e.g. {@code MouseAdapter3D}, {@code KeyAdapter3D}) must
+	 * request a refresh explicitly after the last delta in a batch.
+	 * </p>
 	 *
 	 * @param dy change in y translation
 	 */
@@ -793,6 +803,11 @@ public class Panel3D extends JPanel implements GLEventListener {
 
 	/**
 	 * Increment the current z translation.
+	 * <p>
+	 * Unlike {@link #rotateZ(float)}, this does <em>not</em> call {@link #refresh()}
+	 * itself — callers (e.g. {@code MouseAdapter3D}, {@code KeyAdapter3D}) must
+	 * request a refresh explicitly after the last delta in a batch.
+	 * </p>
 	 *
 	 * @param dz change in z translation
 	 */
@@ -852,6 +867,12 @@ public class Panel3D extends JPanel implements GLEventListener {
 	 * <p>
 	 * If the item is already present, it is moved to the end of the list. Later
 	 * items are normally drawn later within their opaque/transparent pass.
+	 * </p>
+	 * <p>
+	 * The remove-then-add is performed under {@code synchronized(_itemList)} so
+	 * it is atomic with respect to {@code display()}'s own synchronized snapshot
+	 * of {@code _itemList}: without this, a concurrent snapshot taken between the
+	 * remove and the add could observe the item as transiently missing.
 	 * </p>
 	 *
 	 * @param item item to add; ignored when {@code null}
