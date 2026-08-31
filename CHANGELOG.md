@@ -56,11 +56,21 @@ tag — effectively the whole feature-development arc of this project to date.
   is now centered and configured like an ordinary item.
 - Sizing on small/Linux laptop displays.
 - A double-initialization bug.
+- `Axes3D`'s constructor no longer silently swallows exceptions from
+  malformed `limits`/`labels` arrays — a bad call now fails loudly instead of
+  leaving behind a broken, childless item with only a stderr stack trace as a
+  clue.
 
 ### Documentation & Testing
 
 - Complete Javadoc coverage and new unit tests added as part of 1.1.0
   release prep.
+- A further audit pass: documented `Panel3D.addItem`'s synchronization
+  rationale and the `deltaX`/`deltaY`/`deltaZ` vs. `rotateX`/`Y`/`Z`
+  auto-refresh asymmetry; added unit tests for `Support3D`'s triangle
+  subdivision math, `GlobeCountryLines3D`'s dateline-splitting and
+  lon/lat-to-xyz sphere mapping, and `KineticsModel`'s entropy/
+  temperature-scaling behavior.
 
 [Unreleased]: https://github.com/heddle/mdi-3D/compare/v1.0.1...develop
 [1.0.1]: https://github.com/heddle/mdi-3D/compare/v1.0.0c...v1.0.1
