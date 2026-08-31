@@ -159,6 +159,27 @@ public class GlobeCountryLines3D extends Item3D {
         return datelineSplitThreshold;
     }
 
+    /**
+     * Package-private accessor for tests: the number of internal polyline
+     * strips built from the last {@link #rebuild(List)} call.
+     *
+     * @return the strip count
+     */
+    int stripCount() {
+        return strips.size();
+    }
+
+    /**
+     * Package-private accessor for tests: a defensive copy of one internal
+     * strip's packed {@code [x, y, z, x, y, z, ...]} vertex coordinates.
+     *
+     * @param i strip index, in {@code [0, stripCount())}
+     * @return a copy of the strip's coordinate array
+     */
+    float[] strip(int i) {
+        return strips.get(i).clone();
+    }
+
     @Override
     public void draw(GLAutoDrawable drawable) {
         if (strips.isEmpty()) {

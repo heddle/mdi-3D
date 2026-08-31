@@ -126,4 +126,81 @@ class KineticsModelTest {
 				"expected at least one particle to have moved beyond the old box's length (1.0) "
 						+ "into the new, larger box - otherwise this test can't tell reset() apart from a no-op");
 	}
+
+	@Test
+	void computeEntropyIsZeroWhenAllParticlesShareOneHistogramBin() {
+		// bin width = length/10 = 1.0; a subBound of 0.5 keeps every particle's x/y/z
+		// in [0, 0.5), which is entirely inside histogram bin index 0 on every axis.
+		float length = 10.0f;
+		float volumeFraction = 0.05f;
+		KineticsModel model = new KineticsModel(100, length, volumeFraction, 0.01f);
+
+		assertEquals(0f, model.computeEntropy(), 1.0e-6f);
+	}
+
+	@Test
+	void computeEntropyNeverExceedsTheMaximumForA1000BinHistogram() {
+		KineticsModel model = new KineticsModel(200, 1.0f, 1.0f, 1.0f);
+
+		float maxEntropy = (float) Math.log(10 * 10 * 10); // ln(number of histogram bins), achieved iff evenly spread
+		for (int i = 0; i < 300; i++) {
+			model.update();
+			assertTrue(model.computeEntropy() <= maxEntropy + 1.0e-4f,
+					"entropy must never exceed ln(1000), the maximum for a uniform 10x10x10 occupancy histogram");
+		}
+	}
+
+	@Test
+	void setTemperatureScalesEachParticlesVelocityBySqrtOfTheTemperatureRatio() {
+		// A box far larger than the sub-volume the particles start in guarantees
+		// neither update() below triggers a wall bounce, so each measured per-step
+		// displacement is exactly (current velocity * dt). Positions are kept close
+		// to the origin (small volumeFraction) so those small displacements aren't
+		// lost to float32 rounding the way they would be against e.g. a position ~1e5.
+		float length = 1000.0f;
+		int count = 25;
+		float initialTemp = 0.01f;
+		KineticsModel model = new KineticsModel(count, length, 0.01f, initialTemp);
+		model.setTimeStep(0.01f);
+
+		float[] before = model.getSnapshot().coords().clone();
+		model.update();
+		float[] afterFirstStep = model.getSnapshot().coords().clone();
+
+		float ratio = 2.0f; // sigma scales as sqrt(newTemp/oldTemp), so newTemp = oldTemp * ratio^2
+		model.setTemperature(initialTemp * ratio * ratio);
+		model.update();
+		float[] afterSecondStep = model.getSnapshot().coords().clone();
+
+		for (int i = 0; i < before.length; i++) {
+			float displacementBeforeRescale = afterFirstStep[i] - before[i];
+			float displacementAfterRescale = afterSecondStep[i] - afterFirstStep[i];
+			assertEquals(ratio * displacementBeforeRescale, displacementAfterRescale, 1.0e-4f,
+					"setTemperature should scale every particle's velocity by sqrt(newTemp/oldTemp) = " + ratio);
+		}
+	}
+
+	@Test
+	void setTemperatureWithNonPositiveValueIsANoOp() {
+		float length = 1000.0f;
+		float initialTemp = 0.01f;
+		KineticsModel model = new KineticsModel(10, length, 0.01f, initialTemp);
+		model.setTimeStep(0.01f);
+
+		float[] before = model.getSnapshot().coords().clone();
+		model.update();
+		float[] afterFirstStep = model.getSnapshot().coords().clone();
+
+		model.setTemperature(0f);
+		model.setTemperature(-5f);
+		model.update();
+		float[] afterSecondStep = model.getSnapshot().coords().clone();
+
+		for (int i = 0; i < before.length; i++) {
+			float displacementBeforeCall = afterFirstStep[i] - before[i];
+			float displacementAfterCall = afterSecondStep[i] - afterFirstStep[i];
+			assertEquals(displacementBeforeCall, displacementAfterCall, 1.0e-4f,
+					"a non-positive setTemperature() argument must leave velocities (and thus per-step displacement) unchanged");
+		}
+	}
 }
