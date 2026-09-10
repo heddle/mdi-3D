@@ -12,6 +12,14 @@ tag — effectively the whole feature-development arc of this project to date.
 
 ## [Unreleased]
 
+### Added
+
+- `AlphaSlider` (`adapter3D`): a small labeled 0-255 slider for a
+  "volume alpha" control on a `Panel3D`-based view, with an optional
+  `IntConsumer` callback so a caller can propagate the new value to its
+  own items' `FILLALPHA` before the resulting `refresh()` repaints.
+  Generalized out of a CED-specific (`mdi_ced`) copy of the same widget.
+
 ## [1.0.1] - 2026-08-31
 
 ### Added
