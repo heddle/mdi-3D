@@ -12,6 +12,8 @@ tag — effectively the whole feature-development arc of this project to date.
 
 ## [Unreleased]
 
+## [1.0.2] - 2026-09-15
+
 ### Added
 
 - `AlphaSlider` (`adapter3D`): a small labeled 0-255 slider for a
@@ -19,6 +21,11 @@ tag — effectively the whole feature-development arc of this project to date.
   `IntConsumer` callback so a caller can propagate the new value to its
   own items' `FILLALPHA` before the resulting `refresh()` repaints.
   Generalized out of a CED-specific (`mdi_ced`) copy of the same widget.
+
+### Changed
+
+- Updated the base-framework dependency to MDI 1.2.3, making MDI-3D 1.0.2
+  and MDI 1.2.3 the tested release pair used by the reference book.
 
 ## [1.0.1] - 2026-08-31
 
@@ -80,5 +87,6 @@ tag — effectively the whole feature-development arc of this project to date.
   lon/lat-to-xyz sphere mapping, and `KineticsModel`'s entropy/
   temperature-scaling behavior.
 
-[Unreleased]: https://github.com/heddle/mdi-3D/compare/v1.0.1...develop
+[Unreleased]: https://github.com/heddle/mdi-3D/compare/v1.0.2...develop
+[1.0.2]: https://github.com/heddle/mdi-3D/compare/v1.0.1...v1.0.2
 [1.0.1]: https://github.com/heddle/mdi-3D/compare/v1.0.0c...v1.0.1

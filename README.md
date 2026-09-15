@@ -43,6 +43,20 @@ around, so applications that don't need 3D never pull it in.
 - A working OpenGL 2.x-capable environment. `Panel3D` degrades gracefully (see below) if none is
   available, but the demos are obviously more interesting with real rendering.
 
+## Using MDI-3D in a Maven project
+
+MDI-3D 1.0.2 is available from Maven Central:
+
+```xml
+<dependency>
+  <groupId>io.github.heddle</groupId>
+  <artifactId>mdi-3d</artifactId>
+  <version>1.0.2</version>
+</dependency>
+```
+
+The base MDI 1.2.3 framework is pulled in transitively.
+
 ## Quick start
 
 ```bash
