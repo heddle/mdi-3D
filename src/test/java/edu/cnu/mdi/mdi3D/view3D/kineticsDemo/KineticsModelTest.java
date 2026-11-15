@@ -1,6 +1,8 @@
 package edu.cnu.mdi.mdi3D.view3D.kineticsDemo;
 
+import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotSame;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import org.junit.jupiter.api.Test;
@@ -18,6 +20,29 @@ class KineticsModelTest {
 		int count = 20;
 		KineticsModel model = new KineticsModel(count, 1.0f, 0.25f, 0.01f);
 		assertEquals(3 * count, model.getSnapshot().coords().length);
+	}
+	
+	@Test
+	void publishedSnapshotRemainsStableAcrossUpdates() {
+	    KineticsModel model =
+	            new KineticsModel(100, 10f, 0.25f, 1f);
+
+	    SimulationSnapshot<Particle> original =
+	            model.getSnapshot();
+
+	    float[] coordinates = original.coords().clone();
+
+	    // Advance well beyond the two-buffer reuse cycle.
+	    for (int i = 0; i < 20; i++) {
+	        model.update();
+	    }
+
+	    assertArrayEquals(coordinates, original.coords(),
+	            "Previously published coordinates must remain unchanged");
+
+	    assertNotSame(original.coords(),
+	            model.getSnapshot().coords(),
+	            "Published snapshots must own separate coordinate arrays");
 	}
 
 	@Test

@@ -41,6 +41,9 @@ public class KineticsModel {
 	private float[] bufferB;
 	private volatile float[] frontBuffer;
 	private volatile float[] backBuffer;
+	
+	// Stable presentation state, never backed by a working buffer.
+	private volatile SimulationSnapshot<Particle> publishedSnapshot;
 
 	private float temperature;
 	private float time = 0f;
@@ -90,9 +93,10 @@ public class KineticsModel {
 			internalState.add(new PhysicsParticle(px, py, pz, vx, vy, vz));
 		}
 
-		// Seed the front buffer with the initial positions
+		// Seed the front buffer and publish the initial state.
 		initializeFrontBuffer();
 		lastEntropy = computeEntropy();
+		publishSnapshot();
 	}
 
 	/**
@@ -162,8 +166,11 @@ public class KineticsModel {
 			entropyCounter = 0;
 		}
 
-		// Swap front/back so the finished frame becomes visible to the EDT.
+		// Complete the working-buffer update.
 		swapBuffers();
+
+		// Publish an independent, stable presentation snapshot.
+		publishSnapshot();
 	}
 
 	// Single point of truth for swapping buffers.
@@ -172,19 +179,38 @@ public class KineticsModel {
 		frontBuffer = backBuffer;
 		backBuffer = oldFront;
 	}
-
+	
 	/**
-	 * Get an optimized snapshot of the most recently completed simulation state.
-	 * <p>
-	 * This method is side-effect free and safe to call from the EDT.
-	 * </p>
+	 * Publish a stable snapshot of the completed simulation state.
 	 *
-	 * @return snapshot containing a reference to the current front buffer
+	 * Called only from the simulation thread, or during initialization
+	 * before the model is made available to other threads.
+	 *
+	 * The coordinate array is independent of both working buffers.
 	 */
-	public SimulationSnapshot<Particle> getSnapshot() {
-		return new SimulationSnapshot<>(null, frontBuffer, time, lastEntropy);
+	private void publishSnapshot() {
+	    publishedSnapshot = new SimulationSnapshot<>(
+	            null,
+	            frontBuffer.clone(),
+	            time,
+	            lastEntropy);
 	}
 
+	/**
+	 * Returns the most recently published simulation snapshot.
+	 *
+	 * The coordinate array is independent of the simulation's
+	 * working buffers and will not be modified by the model.
+	 * Consumers must treat the returned coordinates as read-only.
+	 *
+	 * Safe to call from the EDT.
+	 *
+	 * @return the latest stable simulation snapshot
+	 */
+	public SimulationSnapshot<Particle> getSnapshot() {
+	    return publishedSnapshot;
+	}
+	
 	/**
 	 * Computes the Shannon entropy of the system based on a coarse 3D occupancy histogram.
 	 * <p>
@@ -338,6 +364,8 @@ public class KineticsModel {
 
 		initializeFrontBuffer();
 		lastEntropy = computeEntropy();
+		entropyCounter = 0;
+		publishSnapshot();
 	}
 
 }
